@@ -19,7 +19,7 @@ window.PLAYBOOK_HTML = `
       <p class="pb-do"><b>Here:</b> every pattern lesson has a labelled method, and every problem has a step-by-step algorithm and dry run.</p></div>
     <div class="card pb-card"><div class="pb-ico">✍️</div><h3>Explain it to yourself</h3>
       <p>Students who explain each step to themselves learn more from the same examples — the <i>self-explanation effect</i> (Chi et al., 1989).</p>
-      <p class="pb-do"><b>Here:</b> use the <b>Scribble</b> box before the code: sketch the state, write the invariant, trace a small example by hand.</p></div>
+      <p class="pb-do"><b>Here:</b> tap <b>Hide &amp; recall</b> on the algorithm and say each step before revealing it, then <b>step through the dry run</b> predicting every line. Write it yourself in <b>Your code</b> and let Claude review it.</p></div>
     <div class="card pb-card"><div class="pb-ico">🧩</div><h3>Rebuild, then write</h3>
       <p>Parsons problems — putting scrambled code lines in order — teach the structure of a solution efficiently: similar learning to writing code from scratch in less time (Parsons &amp; Haden, 2006; Ericson, Margulieux &amp; Rick, 2017).</p>
       <p class="pb-do"><b>Here:</b> <b>Rebuild the code</b> on any problem, in C++, Java or JS.</p></div>
@@ -29,7 +29,7 @@ window.PLAYBOOK_HTML = `
   <ol class="pb-steps">
     <li><b>Warm-up · 5 min</b> — one round of Spot the pattern (10 questions).</li>
     <li><b>Review · 10–15 min</b> — today’s cards. Recall first, then grade honestly.</li>
-    <li><b>New problem · 25–35 min</b> — timed, LeetCode open. Scribble the approach before coding. If stuck at 15 min, take hint 1; at 25 min, hint 2.</li>
+    <li><b>New problem · 25–35 min</b> — timed, LeetCode open. Write the approach as comments in Your code before coding. If stuck at 15 min, take hint 1; at 25 min, hint 2.</li>
     <li><b>Close the loop · 5 min</b> — read the follow-ups, mark Solved or Revisit, and rebuild the code once if it felt shaky.</li>
   </ol>
 </section>

@@ -3,3 +3,5 @@ solutions
 *.md
 .scratch
 android
+.mycode
+.claude

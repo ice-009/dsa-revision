@@ -1,8 +1,8 @@
 // Offline support: precache the whole app, serve from cache, refresh in the background.
 // Bump VERSION on every deploy so installed copies pick up new content.
-const VERSION = 'dsa-revise-v11';
+const VERSION = 'dsa-revise-v12';
 const ASSETS = [
-  './', 'index.html', 'styles.css', 'app.js', 'problems.js', 'notes.js', 'topics.js', 'solutions.js', 'ink.js', 'lessons.js', 'plus/plus1.js', 'plus/plus2.js',
+  './', 'index.html', 'styles.css', 'app.js', 'problems.js', 'notes.js', 'topics.js', 'solutions.js', 'mycode.js', 'explain.js', 'lessons.js', 'plus/plus1.js', 'plus/plus2.js',
   'plus/plus3.js', 'plus/plus4.js', 'playbook.js', 'viz.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/maskable-192.png', 'icons/maskable-512.png',
 ];

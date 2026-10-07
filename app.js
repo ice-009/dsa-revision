@@ -2,7 +2,8 @@
   'use strict';
 
   const ITEMS = window.ITEMS, NOTES = window.NOTES, TOPICS = window.TOPICS, SOLUTIONS = window.SOLUTIONS || {};
-  const LESSONS = window.LESSONS || {}, PLUS = window.PLUS || {};
+  const LESSONS = window.LESSONS || {}, PLUS = window.PLUS || {}, EXPLAIN = window.EXPLAIN || {};
+  const MyCode = window.MyCode;
   const PLAN_START = [2026, 8, 20]; // 20 Sep 2026 (month is 0-based)
   const WEEKS = Math.max(...ITEMS.map(i => i.week));
   const PROBLEMS = ITEMS.filter(i => i.kind === 'Practice');
@@ -169,7 +170,7 @@
 
   window.appToast = toast;
 
-  const inkMark = n => `<span class="inkmark" data-inkmark="${n}" title="Has your scribble" ${window.Ink && Ink.has(n) ? '' : 'hidden'}>✎</span>`;
+  const mineMark = n => `<span class="minemark" data-minemark="${n}" title="Has your code" ${MyCode.get(n) ? '' : 'hidden'}>✎</span>`;
   const diffBadge = d => d ? `<span class="badge d-${esc(d)}">${esc(d[0])}</span>` : '';
   const statusDot = n => `<span class="dot ${esc(S.status[n] || '')}" data-dot="${n}" aria-label="${esc(S.status[n] || 'not started')}"></span>`;
 
@@ -178,7 +179,8 @@
     if (!x) return '';
     return `<div class="notes">
       <div><div class="lbl">What it tests</div>${esc(x.tests)}</div>
-      <div><div class="lbl">Approach</div><ol>${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+      ${EXPLAIN[p.n]?.a ? `<div class="why"><div class="lbl">Understand the approach</div>${esc(EXPLAIN[p.n].a)}</div>` : ''}
+      <div><div class="lbl">Approach${differs(p.n) ? ` <a href="#/problem/${p.n}" data-act="jump" data-v="mine-${p.n}" class="mine-chip">you solved it differently ↓</a>` : ''}</div><ol>${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
       <div class="key"><div class="lbl">Key insight</div>${esc(x.key)}</div>
       <div class="facts">
         <div><div class="lbl">Complexity</div><span class="cx">${esc(x.cx)}</span></div>
@@ -191,9 +193,14 @@
   const LANGS = [['cpp', 'C++'], ['java', 'Java'], ['js', 'JS']];
   const langTabs = () => `<div class="segmented lang-tabs" role="tablist">${LANGS.map(([v, l]) =>
     `<button type="button" class="${S.lang === v ? 'on' : ''}" data-act="lang" data-v="${v}">${l}</button>`).join('')}</div>`;
-  // src: "sol:<n>" or "tpl:<slug>" — lets a language switch re-render every block on the page
+  // src: "sol:<n>", "tpl:<slug>" or "mine:<n>" (your code, as reviewed) — lets a language switch re-render every block on the page
   const codeFor = src => {
     const [kind, id] = src.split(':');
+    if (kind === 'mine') {
+      const r = MyCode.review(id);
+      return r ? r.code[S.lang] || r.code[r.lang] || '' : '';
+    }
+    if (kind === 'raw') return MyCode.get(id)?.code || '';
     const code = kind === 'sol' ? SOLUTIONS[id]?.code : TOPIC_BY_SLUG[id]?.template;
     return (code && (code[S.lang] || code.cpp)) || '';
   };
@@ -208,8 +215,9 @@
     if (!s) return '';
     return `<div class="sol">
       <div class="sol-h"><span>Full solution</span><span class="verified">✓ passes ${s.tests} test${s.tests === 1 ? '' : 's'}</span></div>
-      <div><div class="lbl">Algorithm</div><ol>${s.algo.map(a => `<li>${esc(a)}</li>`).join('')}</ol></div>
-      ${window.Ink ? Ink.html(p.n) : ''}
+      <div><div class="row" style="gap:8px"><div class="lbl" style="margin:0">Algorithm</div><span class="spacer"></span>
+          <button type="button" class="btn small ghost" data-act="recall">🙈 Hide &amp; recall</button></div>
+        <ol class="algo">${s.algo.map(a => `<li data-act="peek">${esc(a)}</li>`).join('')}</ol></div>
       <div>
         <div class="lbl">Code</div>
         ${codeBlock(`sol:${p.n}`)}
@@ -251,7 +259,8 @@
     sweep: ['intervals', 'heap', 'prefix'], matrix: ['graphdfs', 'twoptr', 'bits'], bits: ['hash', 'matrix', 'prefix'],
   };
 
-  const statementHTML = p => PLUS[p.n] ? `<div class="qline"><div class="lbl">The problem</div>${esc(PLUS[p.n].q)}</div>` : '';
+  const statementHTML = p => PLUS[p.n] ? `<div class="qline"><div class="lbl">The problem</div>${esc(PLUS[p.n].q)}
+      ${EXPLAIN[p.n]?.q ? `<div class="explain"><div class="lbl">Understand the question</div>${esc(EXPLAIN[p.n].q)}</div>` : ''}</div>` : '';
   function hintsHTML(n, shown = 0) {
     const x = PLUS[n];
     if (!x) return '';
@@ -276,6 +285,96 @@
     </div>`;
   }
 
+  // ── Your code: write your own solution; Claude reviews it via /review-my-code ──
+  const editing = new Set(); // problems whose editor is open
+  const differs = n => { const r = MyCode.review(n); return !!(r && !r.stale && r.same === false); };
+  const LANG_NAME = Object.fromEntries(LANGS.map(([v, l]) => [v, l]));
+
+  function mineStatus(n) {
+    const e = MyCode.get(n), r = MyCode.review(n), st = MyCode.state;
+    if (!e) return '';
+    if (r && !r.stale) return '<span class="ok">✓ Reviewed by Claude</span>';
+    if (!MyCode.configured()) return 'Saved on this device · <a href="#/more">set up sync</a> to get it reviewed';
+    if (st.busy || e.dirty) return 'Saved on this device · syncing…';
+    if (st.error) return `Saved on this device · ${esc(st.error)}`;
+    return 'Synced · run <code>/review-my-code</code> in Claude Code';
+  }
+
+  function reviewHTML(n, r) {
+    const a = r.approach || {};
+    return `<div class="mine-review">
+      <div class="mine-appr">
+        <div class="row" style="gap:8px"><div class="lbl" style="margin:0">Your approach</div>
+          <span class="badge ${r.same ? 'd-Easy' : 'd-Medium'}">${r.same ? 'Same as the reference' : 'Different approach'}</span></div>
+        ${a.name ? `<b class="mine-name">${esc(a.name)}</b>` : ''}
+        ${a.summary ? `<p>${esc(a.summary)}</p>` : ''}
+        ${a.steps?.length ? `<ol>${a.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol>` : ''}
+        ${a.cx ? `<div class="small"><span class="lbl">Complexity</span> <span class="cx">${esc(a.cx)}</span></div>` : ''}
+      </div>
+      ${r.compare ? `<div class="mine-cmp"><div class="lbl">Compared with the reference</div>${esc(r.compare)}</div>` : ''}
+      ${r.notes?.length ? `<div><div class="lbl">Review notes</div><ul class="mine-notes">${r.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+      <div><div class="row" style="gap:8px"><div class="lbl" style="margin:0">Your code, commented &amp; translated</div><span class="spacer"></span>
+          ${Object.entries(r.tests || {}).map(([l, t]) => `<span class="verified ${t.ok ? '' : 'bad'}" title="${esc(LANG_NAME[l] || l)} tests">${esc(LANG_NAME[l] || l)} ${t.ok ? '✓' : '✗'} ${t.pass}/${t.total}</span>`).join('')}</div>
+        ${codeBlock(`mine:${n}`)}</div>
+    </div>`;
+  }
+
+  function mineHTML(n, { mock = false } = {}) {
+    const e = MyCode.get(n);
+    const r = MyCode.review(n);
+    const lang = e?.lang || S.lang;
+    const head = `<div class="mine-h"><span>${mock ? 'Write your solution' : 'Your code'}</span><span class="mine-st small" data-mine-st="${n}">${mineStatus(n)}</span></div>`;
+    if (editing.has(n) || mock) {
+      return `<div class="mine" id="mine-${n}" data-mine="${n}" data-editing>
+        ${head}
+        <div class="row" style="gap:8px"><div class="segmented">${LANGS.map(([v, l]) =>
+          `<button type="button" class="${lang === v ? 'on' : ''}" data-act="minelang" data-n="${n}" data-v="${v}">${l}</button>`).join('')}</div>
+          <span class="spacer"></span>
+          ${mock ? '' : `<button type="button" class="btn small primary" data-act="minedone" data-n="${n}">Done</button>`}</div>
+        <textarea class="editor" data-editor="${n}" data-lang="${lang}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+          placeholder="Write or paste your solution. It saves as you type.">${esc(e?.code || '')}</textarea>
+        <p class="small muted" style="margin:0">Tab indents · saved on this device as you type${MyCode.configured() ? ' and synced to your repo' : ''}.</p>
+      </div>`;
+    }
+    if (!e) {
+      return `<div class="mine empty" id="mine-${n}" data-mine="${n}">
+        <div><b>Your code</b><p class="small muted" style="margin:2px 0 0">Write your own solution — Claude comments it, translates it to C++, Java and JS, tests every version and explains your approach.</p></div>
+        <button type="button" class="btn small primary" data-act="mineedit" data-n="${n}">✍️ Write your solution</button>
+      </div>`;
+    }
+    return `<div class="mine" id="mine-${n}" data-mine="${n}">
+      ${head}
+      ${r && !r.stale ? reviewHTML(n, r) : `
+        <div class="code-wrap"><pre class="code">${highlight(e.code)}</pre></div>
+        ${r ? `<details class="mine-old"><summary>Review of your previous version</summary>${reviewHTML(n, r)}</details>` : ''}`}
+      <div class="row" style="gap:8px">
+        <button type="button" class="btn small" data-act="mineedit" data-n="${n}">Edit</button>
+        <button type="button" class="btn small ghost" data-act="copy" data-src="raw:${n}">Copy what you wrote</button>
+        <span class="spacer"></span><span class="small muted">${esc(LANG_NAME[e.lang] || e.lang)} · ${e.code.split('\n').length} lines</span>
+      </div>
+    </div>`;
+  }
+
+  // keep every panel in step with the store, without disturbing an editor you're typing in
+  function refreshMine() {
+    document.querySelectorAll('[data-mine]').forEach(el => {
+      const n = Number(el.dataset.mine);
+      if (el.hasAttribute('data-editing')) {
+        const st = el.querySelector('[data-mine-st]');
+        if (st) st.innerHTML = mineStatus(n);
+      } else {
+        el.outerHTML = mineHTML(n);
+      }
+    });
+    document.querySelectorAll('[data-minemark]').forEach(el => { el.hidden = !MyCode.get(Number(el.dataset.minemark)); });
+  }
+
+  let editTimer = 0;
+  const saveEditor = ta => {
+    clearTimeout(editTimer);
+    MyCode.set(Number(ta.dataset.editor), ta.dataset.lang, ta.value);
+  };
+
   function statusButtons(n) {
     const s = S.status[n];
     return `<button type="button" class="btn small ${s === 'solved' ? 'on-solved' : ''}" data-act="status" data-n="${n}" data-v="solved">${s === 'solved' ? '✓ Solved' : 'Mark solved'}</button>
@@ -288,7 +387,7 @@
       <summary>
         ${statusDot(p.n)}
         <span class="t">${esc(p.title)}<small>#${p.n}${showTopic ? ` · ${esc(p.topic)}` : ''}</small></span>
-        <span class="meta">${inkMark(p.n)}<span class="tag">${esc(x.pat)}</span>${diffBadge(p.diff)}</span>
+        <span class="meta">${mineMark(p.n)}<span class="tag">${esc(x.pat)}</span>${diffBadge(p.diff)}</span>
         ${showKey ? `<span class="key-line">${esc(x.key)}</span>` : ''}
       </summary>
       <div class="prob-body" data-body="${p.n}"></div>
@@ -301,6 +400,7 @@
       ${notesHTML(p)}
       ${pathHTML(p)}
       ${solutionHTML(p)}
+      ${mineHTML(p.n)}
       ${deeperHTML(p)}
       <div class="actions">
         ${statusButtons(p.n)}
@@ -624,6 +724,7 @@
         ${notesHTML(p)}
         ${pathHTML(p)}
         ${solutionHTML(p)}
+        ${mineHTML(p.n)}
         ${deeperHTML(p)}
         <div class="actions" data-actions="${p.n}">
           ${statusButtons(p.n)}
@@ -703,6 +804,7 @@
         <div class="row small muted" style="gap:8px">${esc(s.title)} · #${n}${card ? ` · recall ${Math.round(recallNow(card) * 100)}%` : ' · new'} ${diffBadge(p.diff)}${S.status[n] === 'revisit' ? ' <span class="badge d-Hard">revisit</span>' : ''}</div>
         <div class="q-title">${esc(p.title)}</div>
         ${PLUS[n] ? `<p class="q-text">${esc(PLUS[n].q)}</p>` : ''}
+        ${EXPLAIN[n]?.q ? `<details class="explain-d" data-act="noop"><summary>Understand the question</summary><p>${esc(EXPLAIN[n].q)}</p></details>` : ''}
         ${s.flipped
           ? `<div class="row" style="gap:8px"><span class="tag" style="font-size:14px">${esc(x.pat)}</span><span class="muted small">${esc(p.topic)}</span><span class="spacer"></span><a class="small" href="${esc(p.url)}" target="_blank" rel="noopener">LeetCode ↗</a></div>${notesHTML(p)}
             ${pathHTML(p)}
@@ -735,7 +837,7 @@
   const SLIPS = [['pattern', 'Didn’t spot the pattern'], ['trick', 'Forgot the key trick'], ['edge', 'Edge case'], ['index', 'Off-by-one / indices'],
     ['cx', 'Complexity'], ['api', 'Syntax / library']];
   const SLIP_ADVICE = { pattern: 'Do a round of Spot the pattern daily.', trick: 'Reread the key insight and say it aloud before revealing.',
-    edge: 'Run the Playbook edge-case checklist before coding.', index: 'Dry-run 3-element examples by hand in the scribble box.',
+    edge: 'Run the Playbook edge-case checklist before coding.', index: 'Step through the dry run and predict each line before you reveal it.',
     cx: 'Try the Complexity drill.', api: 'Rebuild the code in your interview language.' };
   function logSlip(n, why) {
     (S.slips[n] ||= []).push({ why, at: today() });
@@ -991,8 +1093,8 @@
         <p class="small muted">Hints are best after 15 minutes of honest effort — each one used is recorded.</p>
         <div class="mock-hints">${hintsHTML(p.n, m.hints || 0)}</div>
       </div>
-      <h2>Plan here</h2>
-      ${window.Ink ? Ink.html(p.n) : ''}
+      <h2>Your solution</h2>
+      ${mineHTML(p.n, { mock: true })}
       <p class="small muted" style="margin-top:12px">The solution stays hidden until you finish. <button type="button" class="btn small ghost" data-act="mockquit">Abandon this mock</button></p>
     </div>`;
     mockTimer = setInterval(() => {
@@ -1113,9 +1215,12 @@
         <div class="setting"><div><b>Backup</b><p>Progress lives on this device only. Export a JSON backup now and then.</p></div>
           <div class="row"><button type="button" class="btn small" data-act="export">Export</button>
           <label class="btn small" style="margin:0">Import<input type="file" accept="application/json,.json" data-act="import" hidden></label></div></div>
-        <div class="setting"><div><b>Reset progress</b><p>Clears statuses, review history and streak (your scribbles are kept). Re-seeds from the sheet.</p></div>
+        <div class="setting"><div><b>Reset progress</b><p>Clears statuses, review history and streak (your code is kept). Re-seeds from the sheet.</p></div>
           <button type="button" class="btn small" data-act="reset" style="color:var(--hard)">Reset</button></div>
       </div>
+
+      <h2 id="sync">Your code sync</h2>
+      <div class="card" id="sync-card">${syncCardHTML()}</div>
 
       <h2>Stats</h2>
       <div class="stats">
@@ -1150,6 +1255,29 @@
     }
   }
 
+  function syncCardHTML() {
+    const c = MyCode.config(), st = MyCode.state;
+    const mine = PROBLEMS.filter(p => MyCode.get(p.n));
+    const reviewed = mine.filter(p => { const r = MyCode.review(p.n); return r && !r.stale; }).length;
+    const tokenUrl = 'https://github.com/settings/personal-access-tokens/new?name=DSA%20Revise%20sync&description=Your%20code%20sync%20for%20DSA%20Revise&expires_in=none&contents=write';
+    return `<div class="setting"><div><b>${MyCode.configured() ? (st.busy ? 'Syncing…' : st.error ? 'Sync problem' : '✓ Connected') : 'Not connected'}</b>
+          <p>${MyCode.configured()
+            ? st.error ? esc(st.error) : `${mine.length} solution${mine.length === 1 ? '' : 's'} of yours · ${reviewed} reviewed by Claude${st.last ? ` · last sync ${new Date(st.last).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}`
+            : 'Your code is saved on this device. Connect a private GitHub repo so Claude Code can read it, review it, and send the review back here.'}</p></div>
+        ${MyCode.configured() ? `<button type="button" class="btn small" data-act="syncnow" ${st.busy ? 'disabled' : ''}>Sync now</button>` : ''}</div>
+      <div class="setting col"><div><b>GitHub repo</b><p>Where your code and Claude’s reviews live.</p></div>
+        <input class="search" id="sync-repo" value="${esc(c.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="setting col"><div><b>Access token</b><p>${c.hasToken ? 'A token is saved on this device (never included in backups). Paste a new one to replace it.' : `<a href="${tokenUrl}" target="_blank" rel="noopener">Create a fine-grained token ↗</a> → Repository access: <b>Only select repositories</b> → <b>${esc(c.repo.split('/')[1] || 'dsa-revise-data')}</b> → Permissions: <b>Contents · Read and write</b>. Paste it here.`}</p></div>
+        <div class="row" style="flex-wrap:nowrap"><input class="search" id="sync-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button type="button" class="btn small primary" data-act="syncsave">Save</button>
+          ${c.hasToken ? '<button type="button" class="btn small ghost" data-act="syncforget">Forget</button>' : ''}</div></div>`;
+  }
+  const refreshSync = () => {
+    const card = $('#sync-card');
+    const typing = document.activeElement?.matches('input') && card?.contains(document.activeElement);
+    if (card && !typing) card.innerHTML = syncCardHTML();
+  };
+
   function renderNotFound() {
     view.innerHTML = `<h1>Not found</h1><p><a href="#/today">Go to Today</a></p>`;
   }
@@ -1174,6 +1302,7 @@
     if (page !== 'quiz') quiz = null;
     if (page !== 'parsons') pz = null;
     if (page !== 'mock') clearInterval(mockTimer);
+    editing.clear();
     switch (page) {
       case 'today': renderToday(); break;
       case 'patterns': renderPatterns(); break;
@@ -1280,7 +1409,58 @@
       case 'mockstart': case 'mockend': case 'mockquit': case 'mockout': case 'mockrub': case 'mockslip': case 'mocksave': mockAct(act, v, el.dataset.k); break;
       case 'pzpiece': case 'pzslot': case 'pzcheck': case 'pzhint': case 'pzreset': case 'pzshow': parsonsAct(act, v); break;
       case 'retention': S.retention = Number(v); save(); renderMore(); break;
-      case 'jump': { e.preventDefault(); const t = document.getElementById(v); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); break; }
+      case 'jump': {
+        e.preventDefault();
+        const t = document.getElementById(v);
+        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else if (el.getAttribute('href')) location.hash = el.getAttribute('href');
+        break;
+      }
+      case 'recall': {
+        const ol = el.closest('div').parentElement.querySelector('ol.algo');
+        const on = ol.classList.toggle('recall');
+        ol.querySelectorAll('li').forEach(li => li.classList.remove('seen'));
+        el.textContent = on ? 'Show all steps' : '🙈 Hide & recall';
+        if (on) toast('Say each step out loud, then tap it to check');
+        break;
+      }
+      case 'peek': if (el.parentElement.classList.contains('recall')) el.classList.add('seen'); break;
+      case 'mineedit': {
+        editing.add(Number(n));
+        const box = el.closest('[data-mine]');
+        box.outerHTML = mineHTML(Number(n));
+        const ta = document.querySelector(`[data-editor="${n}"]`);
+        if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+        break;
+      }
+      case 'minedone': {
+        const ta = document.querySelector(`[data-editor="${n}"]`);
+        if (ta) saveEditor(ta);
+        editing.delete(Number(n));
+        el.closest('[data-mine]').outerHTML = mineHTML(Number(n));
+        if (MyCode.get(n)) toast(MyCode.configured() ? 'Saved — syncing to your repo' : 'Saved on this device');
+        break;
+      }
+      case 'minelang': {
+        const box = el.closest('[data-mine]');
+        const ta = box.querySelector('textarea');
+        ta.dataset.lang = v;
+        box.querySelectorAll('[data-act="minelang"]').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+        if (ta.value.trim()) saveEditor(ta);
+        break;
+      }
+      case 'syncsave': {
+        const token = $('#sync-token').value;
+        MyCode.setConfig({ repo: $('#sync-repo').value, ...(token ? { token } : {}) });
+        $('#sync-token').value = '';
+        if (MyCode.configured()) MyCode.sync().then(ok => ok && toast('Connected — your code is synced'));
+        else toast('Paste a token first');
+        break;
+      }
+      case 'syncforget':
+        if (confirm('Remove the GitHub token from this device? Your code stays here and in the repo.')) { MyCode.setConfig({ repo: MyCode.config().repo, token: '' }); renderMore(); }
+        break;
+      case 'syncnow': MyCode.sync().then(ok => ok && toast('Synced')); break;
       case 'fdiff': filters.diff = v; renderProblems(); break;
       case 'fstatus': filters.status = v; renderProblems(); break;
       case 'newper': S.newPerDay = Number(v); save(); renderMore(); break;
@@ -1314,6 +1494,12 @@
   }, true);
 
   document.addEventListener('input', e => {
+    if (e.target.dataset.editor) {
+      const ta = e.target;
+      clearTimeout(editTimer);
+      editTimer = setTimeout(() => saveEditor(ta), 500);
+      return;
+    }
     const f = e.target.dataset.filter;
     if (!f) return;
     filters[f] = e.target.value;
@@ -1327,13 +1513,39 @@
     file.text().then(async txt => {
       const data = JSON.parse(txt);
       if (!data || typeof data.status !== 'object' || typeof data.srs !== 'object') throw new Error('bad file');
-      const { ink, ...state } = data;
+      const { ink, mycode, ...state } = data; // ink: scribbles from older versions, no longer used
       S = { ...defaults(), ...state };
       save(); applyTheme(); renderNavFoot(); renderMore();
-      const pages = ink && window.Ink ? await Ink.importAll(ink) : 0;
-      toast(pages ? `Backup imported, with ${pages} scribble page${pages === 1 ? '' : 's'}` : 'Backup imported');
+      const k = MyCode.importAll(mycode);
+      toast(k ? `Backup imported, with ${k} solution${k === 1 ? '' : 's'} of yours` : 'Backup imported');
     }).catch(() => toast('That file is not a DSA Revise backup'));
   });
+
+  // code editor: Tab indents, Enter keeps the indent (one level deeper after { or :)
+  document.addEventListener('keydown', e => {
+    const ta = e.target;
+    if (!ta.dataset || !ta.dataset.editor || e.metaKey || e.ctrlKey || e.altKey) return;
+    const { selectionStart: a, selectionEnd: b, value } = ta;
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const lineStart = value.lastIndexOf('\n', a - 1) + 1;
+      if (e.shiftKey) {
+        const cut = value.slice(lineStart, lineStart + 4).match(/^ */)[0].length;
+        if (cut) { ta.setRangeText('', lineStart, lineStart + cut, 'preserve'); ta.setSelectionRange(Math.max(lineStart, a - cut), Math.max(lineStart, b - cut)); }
+      } else {
+        ta.setRangeText('    ', a, b, 'end');
+      }
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (e.key === 'Enter' && a === b) {
+      const line = value.slice(value.lastIndexOf('\n', a - 1) + 1, a);
+      let indent = line.match(/^\s*/)[0];
+      if (/[{(\[:]\s*$/.test(line)) indent += '    ';
+      if (!indent) return;
+      e.preventDefault();
+      ta.setRangeText('\n' + indent, a, b, 'end');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, true);
 
   document.addEventListener('keydown', e => {
     if (quiz && !e.target.matches('input, textarea, select') && !e.metaKey && !e.ctrlKey) {
@@ -1353,8 +1565,7 @@
   });
 
   async function exportBackup() {
-    const ink = window.Ink ? await Ink.exportAll() : [];
-    const blob = new Blob([JSON.stringify({ ...S, ink }, null, 1)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ ...S, mycode: MyCode.all() }, null, 1)], { type: 'application/json' });
     if (window.DSAReviseAndroid) {
       // inside the Android app: hand the file to the native "save as" picker
       const reader = new FileReader();
@@ -1401,9 +1612,6 @@
   applyTheme();
   renderNavFoot();
   window.addEventListener('hashchange', route);
-  // the ✎ marks next to problems you've written on
-  const syncInkMarks = () => document.querySelectorAll('[data-inkmark]').forEach(el => { el.hidden = !Ink.has(Number(el.dataset.inkmark)); });
-  document.addEventListener('ink-change', syncInkMarks);
-  document.addEventListener('ink-ready', syncInkMarks);
+  document.addEventListener('mycode-change', () => { refreshMine(); refreshSync(); });
   route();
 })();
