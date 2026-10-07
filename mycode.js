@@ -1,24 +1,28 @@
-/* Your code — your own solution to each problem, plus Claude's review of it.
+/* Sync — your progress and your own code, on every device — plus Claude's reviews of your code.
 
-   Local first: every keystroke is kept on this device (localStorage), so nothing is lost
-   offline. When sync is set up (More → Your code sync), entries are pushed to a private
-   GitHub repo that acts as the database:
+   Local first: everything is kept on this device (localStorage), so nothing is lost offline.
+   When sync is set up (More → Sync), a private GitHub repo acts as the database:
+     progress.json written here     statuses, review cards, streak days, quiz scores, mocks, settings
      code.json     written here     { "<n>": { lang, code, rev, at } }
      reviews.json  written by the /review-my-code Claude Code skill
                    { "<n>": { rev, lang, code: { cpp, java, js }, tests, approach, same, compare, notes, at } }
+   Progress is merged three ways against the last synced copy, so two devices never overwrite each
+   other: per-problem entries take whichever side changed, counters add up both sides' changes,
+   and lists keep both sides' new entries.
    The token never leaves this device and is never included in backups.
 
-   Exposes window.MyCode = { get, set, all, importAll, review, config, setConfig, configured, sync, state }
-   and fires a "mycode-change" event on document whenever entries, reviews or sync state change. */
+   Exposes window.MyCode = { get, set, all, importAll, review, config, setConfig, configured, sync, state,
+   progress, touch } and fires a "mycode-change" event on document whenever entries, reviews or sync state change. */
 (function () {
   'use strict';
 
   const CODE_KEY = 'dsa-revise:mycode';
   const REVIEW_KEY = 'dsa-revise:reviews';
   const SYNC_KEY = 'dsa-revise:sync';
+  const BASE_KEY = 'dsa-revise:sync-base'; // progress as of the last successful sync
   const DEFAULT_REPO = 'ice-009/dsa-revise-data';
   const API = 'https://api.github.com';
-  const PUSH_DELAY = 4000; // push this long after the last keystroke
+  const PUSH_DELAY = 3000; // push this long after the last change
 
   const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (e) { return d; } };
   const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
@@ -171,6 +175,106 @@
     write(REVIEW_KEY, reviews);
   }
 
+  /* ---------- progress: three-way merge ---------- */
+
+  // what syncs; theme, the install banner and an in-progress mock stay per device
+  const MAPS = ['status', 'parsons'];  // per problem: the side that changed it wins
+  const COUNTS = ['days', 'quiz', 'cxq']; // counters: both sides' increments add up
+  const LISTS = ['slips', 'mocks'];      // append-only: keep both sides' new entries
+  const SCALARS = ['newPerDay', 'retention', 'lang'];
+  const FIELDS = ['srs', ...MAPS, ...COUNTS, ...LISTS, ...SCALARS];
+
+  const stable = v => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x)
+    ? Object.fromEntries(Object.keys(x).sort().map(key => [key, x[key]])) : x));
+  const same = (a, b) => stable(a) === stable(b);
+  const clone = v => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
+  const pick = st => Object.fromEntries(FIELDS.filter(f => st[f] !== undefined).map(f => [f, clone(st[f])]));
+
+  function mergeMap(base = {}, local = {}, remote = {}, prefer) {
+    const out = {};
+    for (const k of new Set([...Object.keys(local), ...Object.keys(remote), ...Object.keys(base)])) {
+      const mine = !same(local[k], base[k]), theirs = !same(remote[k], base[k]);
+      let v;
+      if (mine && theirs && prefer) v = prefer(local[k], remote[k]);
+      else v = mine ? local[k] : remote[k];
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  // remote + (local − base), recursively over numbers, arrays and objects
+  function mergeCount(base, local, remote) {
+    if (typeof local === 'number' || typeof remote === 'number' || typeof base === 'number') {
+      return Math.max(0, (remote || 0) + (local || 0) - (base || 0));
+    }
+    if (Array.isArray(local) || Array.isArray(remote)) {
+      const len = Math.max(local?.length || 0, remote?.length || 0);
+      return Array.from({ length: len }, (_, i) => mergeCount(base?.[i], local?.[i], remote?.[i]));
+    }
+    const out = {};
+    for (const k of new Set([...Object.keys(local || {}), ...Object.keys(remote || {})])) {
+      out[k] = mergeCount(base?.[k], local?.[k], remote?.[k]);
+    }
+    return out;
+  }
+  function mergeList(base = [], local = [], remote = []) {
+    const seen = new Set(base.map(stable));
+    const have = new Set(remote.map(stable));
+    const dropped = new Set(base.map(stable).filter(x => !local.some(y => stable(y) === x))); // cleared here
+    return [...remote.filter(x => !dropped.has(stable(x))), ...local.filter(x => !seen.has(stable(x)) && !have.has(stable(x)))];
+  }
+  // a review card changed on both devices: keep the one reviewed most recently, then the one with more reviews
+  const newerCard = (a, b) => (!a ? b : !b ? a : (a.last || '') !== (b.last || '') ? ((a.last || '') > (b.last || '') ? a : b) : (a.reps || 0) >= (b.reps || 0) ? a : b);
+
+  function mergeProgress(base, local, remote) {
+    const out = {};
+    out.srs = mergeMap(base.srs, local.srs, remote.srs, newerCard);
+    for (const f of MAPS) out[f] = mergeMap(base[f], local[f], remote[f]);
+    for (const f of COUNTS) out[f] = mergeCount(base[f], local[f], remote[f] ?? (f === 'cxq' ? [0, 0] : {}));
+    out.slips = {}; // slips[n] is a list per problem
+    for (const n of new Set([...Object.keys(local.slips || {}), ...Object.keys(remote.slips || {})])) {
+      const list = mergeList(base.slips?.[n], local.slips?.[n], remote.slips?.[n]);
+      if (list.length) out.slips[n] = list;
+    }
+    out.mocks = mergeList(base.mocks, local.mocks, remote.mocks);
+    for (const f of SCALARS) {
+      const v = !same(local[f], base[f]) ? local[f] : remote[f] !== undefined ? remote[f] : local[f];
+      if (v !== undefined) out[f] = v;
+    }
+    return out;
+  }
+
+  let hooks = null; // { get, fresh, apply } from the app
+  function progress(h) { hooks = h; }
+
+  async function syncProgress() {
+    if (!hooks) return;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const f = await gh('progress.json');
+      // a device that never synced starts from a fresh install's state, so untouched defaults don't count as edits
+      const base = read(BASE_KEY, null) || pick(hooks.fresh());
+      // nothing in the repo yet (or a field missing) means nothing changed there — not that it was deleted
+      const remote = { ...base, ...(f ? JSON.parse(b64dec(f.content) || '{}') : {}) };
+      const local = pick(hooks.get());
+      const merged = mergeProgress(base, local, remote);
+      if (!f || !same(merged, remote)) {
+        const body = JSON.stringify({ message: 'Update progress', content: b64enc(JSON.stringify(merged) + '\n'), sha: f?.sha });
+        try {
+          await gh('progress.json', { method: 'PUT', body });
+        } catch (err) {
+          if (err.conflict) continue;
+          throw err;
+        }
+      }
+      write(BASE_KEY, merged);
+      // keep anything changed here while the request was in flight
+      const now = pick(hooks.get());
+      const result = mergeProgress(local, now, merged);
+      if (!same(result, now)) hooks.apply(result);
+      return;
+    }
+    throw new Error('Could not save progress to GitHub — try again.');
+  }
+
   let pending = null;
   async function sync({ quiet = false } = {}) {
     if (!configured()) return false;
@@ -180,6 +284,7 @@
     changed();
     pending = (async () => {
       try {
+        await syncProgress();
         await pushCode();
         await pullReviews();
         state.error = '';
@@ -202,19 +307,23 @@
   let pushTimer = 0;
   function schedulePush() {
     clearTimeout(pushTimer);
-    if (configured()) pushTimer = setTimeout(() => sync({ quiet: true }), PUSH_DELAY);
+    if (configured()) pushTimer = setTimeout(() => { pushTimer = 0; sync({ quiet: true }); }, PUSH_DELAY);
   }
 
-  // sync on launch, when coming back to the app, and when the connection returns
+  // sync on launch, when coming back to the app, when the connection returns —
+  // and straight away when you leave the app with changes still waiting
   let lastAuto = 0;
   const autoSync = () => {
-    if (!configured() || Date.now() - lastAuto < 60000) return;
+    if (!configured() || Date.now() - lastAuto < 15000) return;
     lastAuto = Date.now();
     sync({ quiet: true });
   };
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') autoSync(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') autoSync();
+    else if (pushTimer && configured()) { clearTimeout(pushTimer); pushTimer = 0; sync({ quiet: true }); }
+  });
   window.addEventListener('online', autoSync);
   setTimeout(autoSync, 1500);
 
-  window.MyCode = { get, set, all, importAll, review, config, setConfig, configured, sync, state };
+  window.MyCode = { get, set, all, importAll, review, config, setConfig, configured, sync, state, progress, touch: schedulePush, _merge: mergeProgress };
 })();

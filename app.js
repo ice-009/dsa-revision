@@ -34,17 +34,23 @@
   // ── State ─────────────────────────────────────────────────────
   const KEY = 'dsa-revise:v1';
   const defaults = () => ({ status: {}, srs: {}, days: {}, newPerDay: 8, theme: 'auto', hideInstall: false, lang: 'cpp', retention: 0.9, quiz: {}, parsons: {}, cxq: [0, 0], slips: {}, mocks: [], mock: null });
+  // a fresh install: problems already done on the sheet start as solved
+  const seeded = () => {
+    const s = defaults();
+    for (const i of ITEMS) if (i.done) s.status[i.n] = 'solved';
+    return s;
+  };
   const load = () => {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY));
       if (saved && typeof saved === 'object') return { ...defaults(), ...saved };
     } catch (e) { /* storage unavailable */ }
-    const s = defaults();
-    for (const i of ITEMS) if (i.done) s.status[i.n] = 'solved';
-    return s;
+    return seeded();
   };
   let S = load();
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Could not save — storage is full or blocked'); } };
+  const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Could not save — storage is full or blocked'); } };
+  // every change is also queued for sync to your other devices
+  const save = () => { persist(); MyCode.touch(); };
   const dayLog = (d = today()) => (S.days[d] ||= { reviewed: 0, fresh: 0 });
 
   // ── Spaced repetition: FSRS-6 ────────────────────────────────
@@ -198,7 +204,7 @@
     const [kind, id] = src.split(':');
     if (kind === 'mine') {
       const r = MyCode.review(id);
-      return r ? r.code[S.lang] || r.code[r.lang] || '' : '';
+      return r && r.code ? r.code[S.lang] || r.code[r.lang] || '' : '';
     }
     if (kind === 'raw') return MyCode.get(id)?.code || '';
     const code = kind === 'sol' ? SOLUTIONS[id]?.code : TOPIC_BY_SLUG[id]?.template;
@@ -414,12 +420,15 @@
     S.status[n] = S.status[n] === v ? undefined : v;
     if (!S.status[n]) delete S.status[n];
     save();
+    paintStatus(n);
+    renderNavFoot();
+  }
+  function paintStatus(n) {
     document.querySelectorAll(`[data-dot="${n}"]`).forEach(el => { el.className = `dot ${S.status[n] || ''}`; });
     document.querySelectorAll(`[data-actions="${n}"], details.prob[data-n="${n}"] .actions`).forEach(el => {
       el.querySelectorAll('[data-act="status"]').forEach(b => b.remove());
       el.insertAdjacentHTML('afterbegin', statusButtons(n));
     });
-    renderNavFoot();
   }
 
   // ── Views ─────────────────────────────────────────────────────
@@ -1212,14 +1221,14 @@
           ${langTabs()}</div>
         <div class="setting"><div><b>Appearance</b><p>Follows the device setting by default.</p></div>
           <div class="segmented">${['auto', 'light', 'dark'].map(v => `<button type="button" class="${S.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div></div>
-        <div class="setting"><div><b>Backup</b><p>Progress lives on this device only. Export a JSON backup now and then.</p></div>
+        <div class="setting"><div><b>Backup</b><p>${MyCode.configured() ? 'Progress syncs to your repo; a JSON backup is a handy extra copy.' : 'Progress lives on this device only — set up sync below, or export a JSON backup now and then.'}</p></div>
           <div class="row"><button type="button" class="btn small" data-act="export">Export</button>
           <label class="btn small" style="margin:0">Import<input type="file" accept="application/json,.json" data-act="import" hidden></label></div></div>
         <div class="setting"><div><b>Reset progress</b><p>Clears statuses, review history and streak (your code is kept). Re-seeds from the sheet.</p></div>
           <button type="button" class="btn small" data-act="reset" style="color:var(--hard)">Reset</button></div>
       </div>
 
-      <h2 id="sync">Your code sync</h2>
+      <h2 id="sync">Sync across devices</h2>
       <div class="card" id="sync-card">${syncCardHTML()}</div>
 
       <h2>Stats</h2>
@@ -1263,9 +1272,9 @@
     return `<div class="setting"><div><b>${MyCode.configured() ? (st.busy ? 'Syncing…' : st.error ? 'Sync problem' : '✓ Connected') : 'Not connected'}</b>
           <p>${MyCode.configured()
             ? st.error ? esc(st.error) : `${mine.length} solution${mine.length === 1 ? '' : 's'} of yours · ${reviewed} reviewed by Claude${st.last ? ` · last sync ${new Date(st.last).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}`
-            : 'Your code is saved on this device. Connect a private GitHub repo so Claude Code can read it, review it, and send the review back here.'}</p></div>
+            : 'Progress and your code live on this device only. Connect your private GitHub repo to keep every device in step — solved marks, reviews, streak, quiz scores, mocks — and so Claude Code can review your code.'}</p></div>
         ${MyCode.configured() ? `<button type="button" class="btn small" data-act="syncnow" ${st.busy ? 'disabled' : ''}>Sync now</button>` : ''}</div>
-      <div class="setting col"><div><b>GitHub repo</b><p>Where your code and Claude’s reviews live.</p></div>
+      <div class="setting col"><div><b>GitHub repo</b><p>Where your progress, your code and Claude’s reviews live.</p></div>
         <input class="search" id="sync-repo" value="${esc(c.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       <div class="setting col"><div><b>Access token</b><p>${c.hasToken ? 'A token is saved on this device (never included in backups). Paste a new one to replace it.' : `<a href="${tokenUrl}" target="_blank" rel="noopener">Create a fine-grained token ↗</a> → Repository access: <b>Only select repositories</b> → <b>${esc(c.repo.split('/')[1] || 'dsa-revise-data')}</b> → Permissions: <b>Contents · Read and write</b>. Paste it here.`}</p></div>
         <div class="row" style="flex-wrap:nowrap"><input class="search" id="sync-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -1277,6 +1286,34 @@
     const typing = document.activeElement?.matches('input') && card?.contains(document.activeElement);
     if (card && !typing) card.innerHTML = syncCardHTML();
   };
+
+  function paintLang() {
+    document.querySelectorAll('pre[data-code]').forEach(el => { el.innerHTML = highlight(codeFor(el.dataset.code)); });
+    document.querySelectorAll('.lang-tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === S.lang));
+  }
+
+  // progress arriving from another device: update in place, never yank you out of what you're doing
+  MyCode.progress({
+    get: () => S,
+    fresh: seeded,
+    apply(merged) {
+      const before = S;
+      S = { ...S, ...merged };
+      persist();
+      renderNavFoot();
+      for (const n of new Set([...Object.keys(before.status), ...Object.keys(S.status)])) {
+        if (before.status[n] !== S.status[n]) paintStatus(n);
+      }
+      if (before.lang !== S.lang) paintLang();
+      const page = (location.hash.replace(/^#\/?/, '') || 'today').split('/')[0];
+      const busy = document.activeElement?.matches('input, textarea') || quiz || pz || session || S.mock;
+      if (!busy && ['today', 'more', 'review', 'mock'].includes(page)) {
+        const y = window.scrollY;
+        route();
+        window.scrollTo(0, y);
+      }
+    },
+  });
 
   function renderNotFound() {
     view.innerHTML = `<h1>Not found</h1><p><a href="#/today">Go to Today</a></p>`;
@@ -1360,8 +1397,7 @@
         S.lang = v;
         save();
         if (pz) { pz = startParsons(pz.n); renderParsons(); break; }
-        document.querySelectorAll('pre[data-code]').forEach(el => { el.innerHTML = highlight(codeFor(el.dataset.code)); });
-        document.querySelectorAll('.lang-tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+        paintLang();
         break;
       case 'copy': {
         const code = codeFor(el.dataset.src);
