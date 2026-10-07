@@ -2,211 +2,417 @@
 
 // @@ 3
 function containsDuplicate(nums) {
+
   const seen = new Set();
-  for (const x of nums) {
-    if (seen.has(x)) return true;
-    seen.add(x);
+
+  for (const num of nums) {
+
+    if (seen.has(num)) {
+      return true;
+    }
+
+    seen.add(num);
   }
+
   return false;
 }
 
 // @@ 4
 function isAnagram(s, t) {
-  if (s.length !== t.length) return false;
+
+  if (s.length !== t.length) {
+    return false;
+  }
+
   const count = new Array(26).fill(0);
+
   for (let i = 0; i < s.length; i++) {
     count[s.charCodeAt(i) - 97]++;
     count[t.charCodeAt(i) - 97]--;
   }
-  return count.every(c => c === 0);
+
+  for (let i = 0; i < 26; i++) {
+    if (count[i] !== 0) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // @@ 5
 function twoSum(nums, target) {
+
   const seen = new Map(); // value -> index
+
   for (let i = 0; i < nums.length; i++) {
+
     const need = target - nums[i];
-    if (seen.has(need)) return [seen.get(need), i];
+
+    if (seen.has(need)) {
+      return [seen.get(need), i];
+    }
+
     seen.set(nums[i], i);
   }
+
   return [];
 }
 
 // @@ 6
 function groupAnagrams(strs) {
+
   const groups = new Map();
-  for (const w of strs) {
+
+  for (const word of strs) {
+
     const count = new Array(26).fill(0);
-    for (const c of w) count[c.charCodeAt(0) - 97]++;
-    const key = count.join('#'); // letter counts as the key
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(w);
+
+    for (const ch of word) {
+      count[ch.charCodeAt(0) - 97]++;
+    }
+
+    // key = the 26 letter counts of the word
+    const key = count.join('#');
+
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+
+    groups.get(key).push(word);
   }
-  return [...groups.values()];
+
+  const ans = [];
+
+  for (const group of groups.values()) {
+    ans.push(group);
+  }
+
+  return ans;
 }
 
 // @@ 7
 function topKFrequent(nums, k) {
+
   const count = new Map();
-  for (const x of nums) count.set(x, (count.get(x) || 0) + 1);
-  const buckets = Array.from({ length: nums.length + 1 }, () => []); // buckets[f] = numbers seen f times
-  for (const [num, f] of count) buckets[f].push(num);
-  const res = [];
-  for (let f = nums.length; f > 0; f--) {
-    for (const num of buckets[f]) {
-      res.push(num);
-      if (res.length === k) return res;
+
+  for (const num of nums) {
+    count.set(num, (count.get(num) || 0) + 1);
+  }
+
+  // buckets[freq] = numbers that appear freq times
+  const buckets = [];
+
+  for (let i = 0; i <= nums.length; i++) {
+    buckets.push([]);
+  }
+
+  for (const num of count.keys()) {
+    const freq = count.get(num);
+    buckets[freq].push(num);
+  }
+
+  const ans = [];
+
+  for (let freq = nums.length; freq > 0; freq--) {
+
+    for (const num of buckets[freq]) {
+
+      ans.push(num);
+
+      if (ans.length === k) {
+        return ans;
+      }
     }
   }
-  return res;
+
+  return ans;
 }
 
 // @@ 8
 function productExceptSelf(nums) {
+
   const n = nums.length;
-  const res = new Array(n).fill(1);
+  const ans = new Array(n).fill(1);
+
   let prefix = 1;
+
   for (let i = 0; i < n; i++) {
-    res[i] = prefix;
+    ans[i] = prefix;
     prefix *= nums[i];
   }
+
   let suffix = 1;
+
   for (let i = n - 1; i >= 0; i--) {
-    res[i] *= suffix;
+    ans[i] *= suffix;
     suffix *= nums[i];
   }
-  return res;
+
+  return ans;
 }
 
 // @@ 9
 function isValidSudoku(board) {
-  const rows = Array.from({ length: 9 }, () => new Set());
-  const cols = Array.from({ length: 9 }, () => new Set());
-  const boxes = Array.from({ length: 9 }, () => new Set());
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const v = board[r][c];
-      if (v === '.') continue;
-      const b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
-      if (rows[r].has(v) || cols[c].has(v) || boxes[b].has(v)) return false;
-      rows[r].add(v);
-      cols[c].add(v);
-      boxes[b].add(v);
+
+  const rows = [];
+  const cols = [];
+  const boxes = [];
+
+  for (let i = 0; i < 9; i++) {
+    rows.push(new Set());
+    cols.push(new Set());
+    boxes.push(new Set());
+  }
+
+  for (let i = 0; i < 9; i++) {
+
+    for (let j = 0; j < 9; j++) {
+
+      const digit = board[i][j];
+
+      if (digit === '.') {
+        continue;
+      }
+
+      const box = Math.floor(i / 3) * 3 + Math.floor(j / 3);
+
+      if (rows[i].has(digit) || cols[j].has(digit) || boxes[box].has(digit)) {
+        return false;
+      }
+
+      rows[i].add(digit);
+      cols[j].add(digit);
+      boxes[box].add(digit);
     }
   }
+
   return true;
 }
 
 // @@ 10
 function decodeString(s) {
-  const stack = []; // [string before '[', repeat count]
-  let cur = '';
-  let k = 0;
+
+  const nums = [];
+  const strs = [];
+
+  let ans = '';
+  let num = 0;
+
   for (const ch of s) {
+
     if (ch >= '0' && ch <= '9') {
-      k = k * 10 + Number(ch);
-    } else if (ch === '[') {
-      stack.push([cur, k]);
-      cur = '';
-      k = 0;
-    } else if (ch === ']') {
-      const [prev, times] = stack.pop();
-      cur = prev + cur.repeat(times);
-    } else {
-      cur += ch;
+      num = num * 10 + Number(ch);
+    }
+
+    else if (ch === '[') {
+      nums.push(num);
+      strs.push(ans);
+
+      num = 0;
+      ans = '';
+    }
+
+    else if (ch === ']') {
+
+      let times = nums.pop();
+      let temp = strs.pop();
+
+      while (times > 0) {
+        temp += ans;
+        times--;
+      }
+
+      ans = temp;
+    }
+
+    else {
+      ans += ch;
     }
   }
-  return cur;
+
+  return ans;
 }
 
 // @@ 11
 function longestConsecutive(nums) {
-  const s = new Set(nums);
+
+  const numSet = new Set(nums);
   let best = 0;
-  for (const x of s) {
-    if (s.has(x - 1)) continue; // only start at the beginning of a run
-    let y = x;
-    while (s.has(y + 1)) y++;
-    best = Math.max(best, y - x + 1);
+
+  for (const num of numSet) {
+
+    // only start counting at the beginning of a run
+    if (numSet.has(num - 1)) {
+      continue;
+    }
+
+    let curr = num;
+
+    while (numSet.has(curr + 1)) {
+      curr++;
+    }
+
+    best = Math.max(best, curr - num + 1);
   }
+
   return best;
 }
 
 // @@ 13
 function isPalindrome(s) {
-  const isAlnum = ch => /[a-z0-9]/i.test(ch);
-  let l = 0, r = s.length - 1;
-  while (l < r) {
-    while (l < r && !isAlnum(s[l])) l++;
-    while (l < r && !isAlnum(s[r])) r--;
-    if (s[l].toLowerCase() !== s[r].toLowerCase()) return false;
-    l++;
-    r--;
+
+  function isAlnum(ch) {
+    return /[a-z0-9]/i.test(ch);
   }
+
+  let left = 0;
+  let right = s.length - 1;
+
+  while (left < right) {
+
+    while (left < right && !isAlnum(s[left])) {
+      left++;
+    }
+
+    while (left < right && !isAlnum(s[right])) {
+      right--;
+    }
+
+    if (s[left].toLowerCase() !== s[right].toLowerCase()) {
+      return false;
+    }
+
+    left++;
+    right--;
+  }
+
   return true;
 }
 
 // @@ 14
 function twoSum(numbers, target) {
-  let l = 0, r = numbers.length - 1;
-  while (l < r) {
-    const s = numbers[l] + numbers[r];
-    if (s === target) return [l + 1, r + 1];
-    if (s < target) l++;
-    else r--;
+
+  let left = 0;
+  let right = numbers.length - 1;
+
+  while (left < right) {
+
+    const sum = numbers[left] + numbers[right];
+
+    if (sum === target) {
+      return [left + 1, right + 1];
+    }
+
+    if (sum < target) {
+      left++;
+    }
+    else {
+      right--;
+    }
   }
+
   return [];
 }
 
 // @@ 15
 function threeSum(nums) {
+
   nums.sort((a, b) => a - b);
-  const res = [];
+
+  const ans = [];
   const n = nums.length;
+
   for (let i = 0; i < n - 2; i++) {
-    if (nums[i] > 0) break;
-    if (i > 0 && nums[i] === nums[i - 1]) continue;
-    let l = i + 1, r = n - 1;
-    while (l < r) {
-      const s = nums[i] + nums[l] + nums[r];
-      if (s < 0) l++;
-      else if (s > 0) r--;
+
+    if (nums[i] > 0) {
+      break;
+    }
+
+    if (i > 0 && nums[i] === nums[i - 1]) {
+      continue;
+    }
+
+    let left = i + 1;
+    let right = n - 1;
+
+    while (left < right) {
+
+      const sum = nums[i] + nums[left] + nums[right];
+
+      if (sum < 0) {
+        left++;
+      }
+
+      else if (sum > 0) {
+        right--;
+      }
+
       else {
-        res.push([nums[i], nums[l], nums[r]]);
-        l++;
-        r--;
-        while (l < r && nums[l] === nums[l - 1]) l++;
+        ans.push([nums[i], nums[left], nums[right]]);
+
+        left++;
+        right--;
+
+        while (left < right && nums[left] === nums[left - 1]) {
+          left++;
+        }
       }
     }
   }
-  return res;
+
+  return ans;
 }
 
 // @@ 16
 function maxArea(height) {
-  let l = 0, r = height.length - 1, best = 0;
-  while (l < r) {
-    best = Math.max(best, Math.min(height[l], height[r]) * (r - l));
-    if (height[l] < height[r]) l++;
-    else r--;
+
+  let left = 0;
+  let right = height.length - 1;
+  let best = 0;
+
+  while (left < right) {
+
+    const width = right - left;
+    const area = Math.min(height[left], height[right]) * width;
+
+    best = Math.max(best, area);
+
+    if (height[left] < height[right]) {
+      left++;
+    }
+    else {
+      right--;
+    }
   }
+
   return best;
 }
 
 // @@ 17
 function trap(height) {
-  let l = 0, r = height.length - 1;
-  let leftMax = 0, rightMax = 0, water = 0;
-  while (l < r) {
-    if (height[l] < height[r]) {
-      leftMax = Math.max(leftMax, height[l]);
-      water += leftMax - height[l];
-      l++;
-    } else {
-      rightMax = Math.max(rightMax, height[r]);
-      water += rightMax - height[r];
-      r--;
+
+  let left = 0;
+  let right = height.length - 1;
+
+  let leftMax = 0;
+  let rightMax = 0;
+  let water = 0;
+
+  while (left < right) {
+
+    if (height[left] < height[right]) {
+      leftMax = Math.max(leftMax, height[left]);
+      water += leftMax - height[left];
+      left++;
+    }
+
+    else {
+      rightMax = Math.max(rightMax, height[right]);
+      water += rightMax - height[right];
+      right--;
     }
   }
+
   return water;
 }

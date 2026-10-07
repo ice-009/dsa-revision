@@ -5,14 +5,14 @@ from _harness import *
 @sol(19, ex='prices = [7, 1, 5, 3, 6, 4]', run=lambda f: f([7, 1, 5, 3, 6, 4]), expect=5,
      tests=[(lambda f: f([7, 6, 4, 3, 1]), 0)],
      algo=['lowest = cheapest price seen so far (the best day to have bought).',
-           'For each price p: lowest = min(lowest, p); best = max(best, p − lowest).',
+           'For each price: lowest = min(lowest, price); best = max(best, price − lowest).',
            'Return best (0 if prices only fall).'],
-     dry=['p=7 → lowest=7, profit 0',
-          'p=1 → lowest=1, profit 0',
-          'p=5 → profit 4 → best=4',
-          'p=3 → profit 2',
-          'p=6 → profit 5 → best=5',
-          'p=4 → profit 3 ⇒ 5'])
+     dry=['price=7 → lowest=7, profit 0',
+          'price=1 → lowest=1, profit 0',
+          'price=5 → profit 4 → best=4',
+          'price=3 → profit 2',
+          'price=6 → profit 5 → best=5',
+          'price=4 → profit 3 ⇒ 5'])
 def maxProfit(prices):
     lowest = float('inf')
     best = 0
@@ -24,13 +24,13 @@ def maxProfit(prices):
 
 @sol(20, ex='s = "abba"', run=lambda f: f('abba'), expect=2,
      tests=[(lambda f: f('abcabcbb'), 3), (lambda f: f('pwwkew'), 3), (lambda f: f(''), 0), (lambda f: f('bbbbb'), 1)],
-     algo=['last[c] = latest index of c; window is s[l..r].',
-           'At each r: if c was seen, jump l = max(l, last[c] + 1) — max() so l never moves backwards.',
-           'last[c] = r; best = max(best, r − l + 1).'],
-     dry=["r=0 'a' → l=0, last={a:0}, best=1",
-          "r=1 'b' → l=0, best=2",
-          "r=2 'b' seen at 1 → l=max(0,2)=2, window 'b'",
-          "r=3 'a' seen at 0 → l=max(2,1)=2 (stays!), window 'ba', best=2"])
+     algo=['last[ch] = latest index of ch; window is s[left..right].',
+           'At each right: if ch was last seen inside the window (last[ch] ≥ left), jump left = last[ch] + 1.',
+           'last[ch] = right; best = max(best, right − left + 1).'],
+     dry=["right=0 'a' → left=0, last={a:0}, best=1",
+          "right=1 'b' → left=0, best=2",
+          "right=2 'b' seen at 1 ≥ 0 → left=2, window 'b'",
+          "right=3 'a' seen at 0 < 2 → left stays 2, window 'ba', best=2"])
 def lengthOfLongestSubstring(s):
     last = {}
     l = best = 0
@@ -44,17 +44,17 @@ def lengthOfLongestSubstring(s):
 
 @sol(21, ex='s = "AABABBA", k = 1', run=lambda f: f('AABABBA', 1), expect=4,
      tests=[(lambda f: f('ABAB', 2), 4), (lambda f: f('A', 0), 1)],
-     algo=['Window s[l..r] is valid if (length − count of its most common char) ≤ k.',
-           'Add s[r]; update max_f.',
-           'While invalid: drop s[l] from counts, l++.',
-           'best = max(best, window length). max_f never needs to decrease.'],
-     dry=['r=0 A → A1, win 1, best 1',
-          'r=1 A → A2, max_f 2, win 2, best 2',
-          'r=2 B → win 3, 3−2=1 ≤ 1, best 3',
-          'r=3 A → A3, win 4, 4−3=1, best 4',
-          'r=4 B → win 5, 5−3=2 > 1 → drop A, l=1 → win 4',
-          'r=5 B → B3, win 5 → drop A, l=2 → win 4',
-          'r=6 A → win 5 → drop B, l=3 → win 4 ⇒ 4'])
+     algo=['Window s[left..right] is valid if (length − count of its most common char) ≤ k.',
+           'Add s[right]; update maxFreq.',
+           'While invalid: drop s[left] from counts, left++.',
+           'best = max(best, window length). maxFreq never needs to decrease.'],
+     dry=['right=0 A → A1, win 1, best 1',
+          'right=1 A → A2, maxFreq 2, win 2, best 2',
+          'right=2 B → win 3, 3−2=1 ≤ 1, best 3',
+          'right=3 A → A3, win 4, 4−3=1, best 4',
+          'right=4 B → win 5, 5−3=2 > 1 → drop A, left=1 → win 4',
+          'right=5 B → B3, win 5 → drop A, left=2 → win 4',
+          'right=6 A → win 5 → drop B, left=3 → win 4 ⇒ 4'])
 def characterReplacement(s, k):
     count = defaultdict(int)
     l = max_f = best = 0
@@ -72,12 +72,12 @@ def characterReplacement(s, k):
      tests=[(lambda f: f('ab', 'eidboaoo'), False), (lambda f: f('abc', 'ab'), False)],
      algo=['If s1 is longer than s2 → False.',
            'need = letter counts of s1; window = counts of the first len(s1) chars of s2.',
-           'Slide one step at a time: add s2[r], remove s2[r − n]; equal counts → True.'],
+           'Slide one step at a time: add s2[right], remove s2[right − n]; equal counts → True.'],
      dry=['need: a1 b1',
           "window 'ei' → no",
-          "r=2: +d −e → 'id' → no",
-          "r=3: +b −i → 'db' → no",
-          "r=4: +a −d → 'ba' = need → True"])
+          "right=2: +d −e → 'id' → no",
+          "right=3: +b −i → 'db' → no",
+          "right=4: +a −d → 'ba' = need → True"])
 def checkInclusion(s1, s2):
     n = len(s1)
     if n > len(s2):
@@ -99,17 +99,17 @@ def checkInclusion(s1, s2):
 @sol(23, ex='nums = [1, 3, -1, -3, 5, 3, 6, 7], k = 3', run=lambda f: f([1, 3, -1, -3, 5, 3, 6, 7], 3),
      expect=[3, 3, 5, 5, 6, 7],
      tests=[(lambda f: f([1], 1), [1]), (lambda f: f([9, 8, 7, 6], 2), [9, 8, 7])],
-     algo=['q = deque (double-ended queue) of indices whose values are decreasing (front = current max).',
-           'For each r: pop from the back while nums[back] < nums[r]; append r.',
-           'If the front index left the window (≤ r − k) pop it from the front.',
-           'Once r ≥ k−1, record nums[q[0]].'],
-     dry=['r=0 (1) → q=[0]',
-          'r=1 (3) → pop 0 → q=[1]',
-          'r=2 (-1) → q=[1,2] → max 3',
-          'r=3 (-3) → q=[1,2,3] → max 3',
-          'r=4 (5) → pop 3,2,1 → q=[4] → max 5',
-          'r=5 (3) → q=[4,5] → max 5',
-          'r=6 (6) → q=[6] → 6;  r=7 (7) → q=[7] → 7'])
+     algo=['dq = deque (double-ended queue) of indices whose values are decreasing (front = current max).',
+           'For each right: pop from the back while nums[back] < nums[right]; push right.',
+           'If the front index left the window (≤ right − k) pop it from the front.',
+           'Once right ≥ k−1, record nums[front].'],
+     dry=['right=0 (1) → dq=[0]',
+          'right=1 (3) → pop 0 → dq=[1]',
+          'right=2 (-1) → dq=[1,2] → max 3',
+          'right=3 (-3) → dq=[1,2,3] → max 3',
+          'right=4 (5) → pop 3,2,1 → dq=[4] → max 5',
+          'right=5 (3) → dq=[4,5] → max 5',
+          'right=6 (6) → dq=[6] → 6;  right=7 (7) → dq=[7] → 7'])
 def maxSlidingWindow(nums, k):
     q = deque()
     res = []
@@ -126,15 +126,15 @@ def maxSlidingWindow(nums, k):
 
 @sol(24, ex='s = "ADOBECODEBANC", t = "ABC"', run=lambda f: f('ADOBECODEBANC', 'ABC'), expect='BANC',
      tests=[(lambda f: f('a', 'a'), 'a'), (lambda f: f('a', 'aa'), ''), (lambda f: f('aa', 'aa'), 'aa')],
-     algo=['need[c] = count of each char in t; required = number of distinct chars in t; have = how many are satisfied.',
-           'Expand r: window[c] += 1; when window[c] reaches need[c], have += 1.',
-           'While have == required: record the window if shorter, then drop s[l] (have −= 1 if it falls below need) and l++.',
+     algo=['need[ch] = count of each char in t; required = number of distinct chars in t; have = how many are satisfied.',
+           'Expand right: window[ch] += 1; when window[ch] reaches need[ch], have += 1.',
+           'While have == required: record the window if shorter, then drop s[left] (have −= 1 if it falls below need) and left++.',
            'Return the best window (or "" if none).'],
-     dry=["r=0..5 'ADOBEC' → A,B,C satisfied → have=3 → best='ADOBEC' (6)",
-          "shrink: drop A → have=2, l=1",
-          "r=6..9 'ODEB' → still missing A",
-          "r=10 'A' → have=3 → shrink l=1→5 (lengths 10..6, none < 6), drop C → have=2, l=6",
-          "r=12 'C' → have=3 → shrink: 'DEBANC'(6) → 'EBANC'(5) ★ → 'BANC'(4) ★ → drop B, have=2",
+     dry=["right=0..5 'ADOBEC' → A,B,C satisfied → have=3 → best='ADOBEC' (6)",
+          "shrink: drop A → have=2, left=1",
+          "right=6..9 'ODEB' → still missing A",
+          "right=10 'A' → have=3 → shrink left=1→5 (lengths 10..6, none < 6), drop C → have=2, left=6",
+          "right=12 'C' → have=3 → shrink: 'DEBANC'(6) → 'EBANC'(5) ★ → 'BANC'(4) ★ → drop B, have=2",
           "⇒ 'BANC'"])
 def minWindow(s, t):
     if not s or not t:

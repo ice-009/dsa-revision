@@ -2,13 +2,25 @@
 
 // @@ 140
 class MyCalendar {
-    private final List<int[]> booked = new ArrayList<>();  // half-open [start, end)
+    private List<int[]> booked;
 
-    public MyCalendar() {}
+    public MyCalendar() {
+        booked = new ArrayList<>();
+    }
 
     public boolean book(int start, int end) {
-        for (int[] b : booked)
-            if (start < b[1] && b[0] < end) return false;  // overlap
+
+        for (int[] interval : booked) {
+
+            int bookedStart = interval[0];
+            int bookedEnd = interval[1];
+
+            // half-open intervals overlap
+            if (start < bookedEnd && bookedStart < end) {
+                return false;
+            }
+        }
+
         booked.add(new int[]{start, end});
         return true;
     }
@@ -17,33 +29,63 @@ class MyCalendar {
 // @@ 141
 class Solution {
     public int[][] insert(int[][] intervals, int[] newInterval) {
-        List<int[]> res = new ArrayList<>();
-        int s = newInterval[0], e = newInterval[1], i = 0, n = intervals.length;
-        while (i < n && intervals[i][1] < s) res.add(intervals[i++]);  // entirely before
-        while (i < n && intervals[i][0] <= e) {                        // overlapping: merge
-            s = Math.min(s, intervals[i][0]);
-            e = Math.max(e, intervals[i][1]);
+
+        List<int[]> ans = new ArrayList<>();
+
+        int start = newInterval[0];
+        int end = newInterval[1];
+
+        int n = intervals.length;
+        int i = 0;
+
+        // intervals that end before the new one starts
+        while (i < n && intervals[i][1] < start) {
+            ans.add(intervals[i]);
             i++;
         }
-        res.add(new int[]{s, e});
-        while (i < n) res.add(intervals[i++]);  // entirely after
-        return res.toArray(new int[0][]);
+
+        // intervals that overlap the new one: merge them
+        while (i < n && intervals[i][0] <= end) {
+            start = Math.min(start, intervals[i][0]);
+            end = Math.max(end, intervals[i][1]);
+            i++;
+        }
+
+        ans.add(new int[]{start, end});
+
+        // intervals after the new one
+        while (i < n) {
+            ans.add(intervals[i]);
+            i++;
+        }
+
+        return ans.toArray(new int[0][]);
     }
 }
 
 // @@ 142
 class Solution {
     public int[][] merge(int[][] intervals) {
-        Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));  // by start
+
+        Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+
         List<int[]> merged = new ArrayList<>();
-        for (int[] iv : intervals) {
-            if (!merged.isEmpty() && iv[0] <= merged.get(merged.size() - 1)[1]) {
+
+        for (int[] interval : intervals) {
+
+            int start = interval[0];
+            int end = interval[1];
+
+            if (!merged.isEmpty() && start <= merged.get(merged.size() - 1)[1]) {
                 int[] last = merged.get(merged.size() - 1);
-                last[1] = Math.max(last[1], iv[1]);
-            } else {
-                merged.add(iv);
+                last[1] = Math.max(last[1], end);
+            }
+
+            else {
+                merged.add(new int[]{start, end});
             }
         }
+
         return merged.toArray(new int[0][]);
     }
 }
@@ -51,15 +93,23 @@ class Solution {
 // @@ 143
 class Solution {
     public int eraseOverlapIntervals(int[][] intervals) {
-        Arrays.sort(intervals, (a, b) -> Integer.compare(a[1], b[1]));  // by end
+
+        Arrays.sort(intervals, (a, b) -> Integer.compare(a[1], b[1]));
+
         int kept = 0;
         long prevEnd = Long.MIN_VALUE;
-        for (int[] iv : intervals) {
-            if (iv[0] >= prevEnd) {  // fits after the last kept one
+
+        for (int[] interval : intervals) {
+
+            int start = interval[0];
+            int end = interval[1];
+
+            if (start >= prevEnd) {
                 kept++;
-                prevEnd = iv[1];
+                prevEnd = end;
             }
         }
+
         return intervals.length - kept;
     }
 }
@@ -67,16 +117,30 @@ class Solution {
 // @@ 144
 class Solution {
     public boolean carPooling(int[][] trips, int capacity) {
+
         int[] diff = new int[1001];
-        for (int[] t : trips) {
-            diff[t[1]] += t[0];  // passengers get in at `from`
-            diff[t[2]] -= t[0];  // and leave at `to`
+
+        for (int[] trip : trips) {
+
+            int passengers = trip[0];
+            int from = trip[1];
+            int to = trip[2];
+
+            diff[from] += passengers;
+            diff[to] -= passengers;
         }
+
         int load = 0;
-        for (int change : diff) {
-            load += change;
-            if (load > capacity) return false;
+
+        for (int pos = 0; pos < diff.length; pos++) {
+
+            load += diff[pos];
+
+            if (load > capacity) {
+                return false;
+            }
         }
+
         return true;
     }
 }
@@ -84,22 +148,48 @@ class Solution {
 // @@ 145
 class Solution {
     public int[] minInterval(int[][] intervals, int[] queries) {
-        Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));  // by start
-        Integer[] order = new Integer[queries.length];
-        for (int i = 0; i < order.length; i++) order[i] = i;
-        Arrays.sort(order, (a, b) -> Integer.compare(queries[a], queries[b]));
-        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> a[0] - b[0]);  // {size, right end}
+
+        Arrays.sort(intervals, (a, b) -> Integer.compare(a[0], b[0]));
+
+        // {query value, original index}, sorted by value
+        int[][] sortedQueries = new int[queries.length][2];
+        for (int i = 0; i < queries.length; i++) {
+            sortedQueries[i][0] = queries[i];
+            sortedQueries[i][1] = i;
+        }
+        Arrays.sort(sortedQueries, (a, b) -> Integer.compare(a[0], b[0]));
+
+        // min-heap of {size, right end}
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> Integer.compare(a[0], b[0]));
+
         int[] ans = new int[queries.length];
         int i = 0;
-        for (int qi : order) {
-            int q = queries[qi];
+
+        for (int[] query : sortedQueries) {
+
+            int q = query[0];
+            int index = query[1];
+
             while (i < intervals.length && intervals[i][0] <= q) {
-                heap.add(new int[]{intervals[i][1] - intervals[i][0] + 1, intervals[i][1]});
+                int left = intervals[i][0];
+                int right = intervals[i][1];
+                heap.add(new int[]{right - left + 1, right});
                 i++;
             }
-            while (!heap.isEmpty() && heap.peek()[1] < q) heap.poll();  // ends before q
-            ans[qi] = heap.isEmpty() ? -1 : heap.peek()[0];
+
+            while (!heap.isEmpty() && heap.peek()[1] < q) {
+                heap.poll();
+            }
+
+            if (heap.isEmpty()) {
+                ans[index] = -1;
+            }
+
+            else {
+                ans[index] = heap.peek()[0];
+            }
         }
+
         return ans;
     }
 }
@@ -107,59 +197,108 @@ class Solution {
 // @@ 147
 class Solution {
     public boolean isHappy(int n) {
-        int slow = n, fast = next(n);  // Floyd: detect the cycle without a set
+
+        // Floyd: detect the cycle without a set
+        int slow = n;
+        int fast = next(n);
+
         while (fast != 1 && slow != fast) {
             slow = next(slow);
             fast = next(next(fast));
         }
+
         return fast == 1;
     }
 
     private int next(int x) {
-        int s = 0;
-        for (; x > 0; x /= 10) s += (x % 10) * (x % 10);
-        return s;
+
+        int sum = 0;
+
+        while (x > 0) {
+            int digit = x % 10;
+            sum += digit * digit;
+            x /= 10;
+        }
+
+        return sum;
     }
 }
 
 // @@ 148
 class Solution {
     public void rotate(int[][] matrix) {
+
         int n = matrix.length;
-        for (int i = 0; i < n; i++)
-            for (int j = i + 1; j < n; j++) {  // transpose
-                int tmp = matrix[i][j];
+
+        // transpose
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int temp = matrix[i][j];
                 matrix[i][j] = matrix[j][i];
-                matrix[j][i] = tmp;
+                matrix[j][i] = temp;
             }
-        for (int[] row : matrix)  // mirror each row
-            for (int l = 0, r = n - 1; l < r; l++, r--) {
-                int tmp = row[l];
-                row[l] = row[r];
-                row[r] = tmp;
-            }
+        }
+
+        // reverse each row
+        for (int i = 0; i < n; i++) {
+            reverseRow(matrix[i]);
+        }
+    }
+
+    private void reverseRow(int[] row) {
+
+        int left = 0;
+        int right = row.length - 1;
+
+        while (left < right) {
+            int temp = row[left];
+            row[left] = row[right];
+            row[right] = temp;
+
+            left++;
+            right--;
+        }
     }
 }
 
 // @@ 149
 class Solution {
     public List<Integer> spiralOrder(int[][] matrix) {
+
         List<Integer> res = new ArrayList<>();
-        int top = 0, bottom = matrix.length - 1, left = 0, right = matrix[0].length - 1;
+
+        int top = 0;
+        int bottom = matrix.length - 1;
+        int left = 0;
+        int right = matrix[0].length - 1;
+
         while (top <= bottom && left <= right) {
-            for (int c = left; c <= right; c++) res.add(matrix[top][c]);
+
+            for (int col = left; col <= right; col++) {
+                res.add(matrix[top][col]);
+            }
             top++;
-            for (int r = top; r <= bottom; r++) res.add(matrix[r][right]);
+
+            for (int row = top; row <= bottom; row++) {
+                res.add(matrix[row][right]);
+            }
             right--;
+
             if (top <= bottom) {
-                for (int c = right; c >= left; c--) res.add(matrix[bottom][c]);
+                for (int col = right; col >= left; col--) {
+                    res.add(matrix[bottom][col]);
+                }
                 bottom--;
             }
+
             if (left <= right) {
-                for (int r = bottom; r >= top; r--) res.add(matrix[r][left]);
+                for (int row = bottom; row >= top; row--) {
+                    res.add(matrix[row][left]);
+                }
                 left++;
             }
         }
+
         return res;
     }
 }
@@ -167,27 +306,68 @@ class Solution {
 // @@ 150
 class Solution {
     public void setZeroes(int[][] matrix) {
-        int rows = matrix.length, cols = matrix[0].length;
-        boolean firstRow = false, firstCol = false;
-        for (int c = 0; c < cols; c++) firstRow |= matrix[0][c] == 0;
-        for (int r = 0; r < rows; r++) firstCol |= matrix[r][0] == 0;
-        for (int r = 1; r < rows; r++)
-            for (int c = 1; c < cols; c++)
-                if (matrix[r][c] == 0) matrix[r][0] = matrix[0][c] = 0;  // markers
-        for (int r = 1; r < rows; r++)
-            for (int c = 1; c < cols; c++)
-                if (matrix[r][0] == 0 || matrix[0][c] == 0) matrix[r][c] = 0;
-        if (firstRow) Arrays.fill(matrix[0], 0);
-        if (firstCol)
-            for (int r = 0; r < rows; r++) matrix[r][0] = 0;
+
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+
+        boolean firstRowZero = false;
+        boolean firstColZero = false;
+
+        for (int c = 0; c < cols; c++) {
+            if (matrix[0][c] == 0) {
+                firstRowZero = true;
+            }
+        }
+
+        for (int r = 0; r < rows; r++) {
+            if (matrix[r][0] == 0) {
+                firstColZero = true;
+            }
+        }
+
+        // use row 0 and column 0 as markers
+        for (int r = 1; r < rows; r++) {
+            for (int c = 1; c < cols; c++) {
+                if (matrix[r][c] == 0) {
+                    matrix[r][0] = 0;
+                    matrix[0][c] = 0;
+                }
+            }
+        }
+
+        for (int r = 1; r < rows; r++) {
+            for (int c = 1; c < cols; c++) {
+                if (matrix[r][0] == 0 || matrix[0][c] == 0) {
+                    matrix[r][c] = 0;
+                }
+            }
+        }
+
+        if (firstRowZero) {
+            for (int c = 0; c < cols; c++) {
+                matrix[0][c] = 0;
+            }
+        }
+
+        if (firstColZero) {
+            for (int r = 0; r < rows; r++) {
+                matrix[r][0] = 0;
+            }
+        }
     }
 }
 
 // @@ 152
 class Solution {
     public int singleNumber(int[] nums) {
+
         int res = 0;
-        for (int x : nums) res ^= x;  // pairs cancel out
+
+        // pairs cancel out
+        for (int num : nums) {
+            res ^= num;
+        }
+
         return res;
     }
 }
@@ -195,11 +375,14 @@ class Solution {
 // @@ 153
 class Solution {
     public int hammingWeight(int n) {
+
         int count = 0;
+
         while (n != 0) {
-            n &= n - 1;  // clear the lowest set bit
+            n = n & (n - 1);  // clear the lowest set bit
             count++;
         }
+
         return count;
     }
 }
@@ -207,8 +390,13 @@ class Solution {
 // @@ 154
 class Solution {
     public int[] countBits(int n) {
+
         int[] bits = new int[n + 1];
-        for (int i = 1; i <= n; i++) bits[i] = bits[i >> 1] + (i & 1);
+
+        for (int i = 1; i <= n; i++) {
+            bits[i] = bits[i >> 1] + (i & 1);
+        }
+
         return bits;
     }
 }
@@ -217,11 +405,19 @@ class Solution {
 class Solution {
     // Java has no unsigned int: n and the result are the same 32 bits read as unsigned
     public int reverseBits(int n) {
+
         int res = 0;
+
         for (int i = 0; i < 32; i++) {
-            res = (res << 1) | (n & 1);  // move n's lowest bit onto res
-            n >>>= 1;                    // unsigned shift
+
+            int lowestBit = n & 1;
+
+            res = res << 1;
+            res = res | lowestBit;
+
+            n = n >>> 1;
         }
+
         return res;
     }
 }
@@ -229,8 +425,16 @@ class Solution {
 // @@ 156
 class Solution {
     public int missingNumber(int[] nums) {
-        int res = nums.length;
-        for (int i = 0; i < nums.length; i++) res ^= i ^ nums[i];  // indices cancel values
+
+        int n = nums.length;
+        int res = n;
+
+        // every present number cancels with its index
+        for (int i = 0; i < n; i++) {
+            res ^= i;
+            res ^= nums[i];
+        }
+
         return res;
     }
 }

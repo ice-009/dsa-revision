@@ -34,12 +34,12 @@ def maxDepth(root):
 @sol(57, ex='root = [1, 2, 3, 4, 5]', run=lambda f: f(T([1, 2, 3, 4, 5])), expect=3,
      tests=[(lambda f: f(T([1, 2])), 1), (lambda f: f(T([1])), 0)],
      algo=['height(node) returns the number of nodes on the longest downward path.',
-           'At every node the longest path THROUGH it has l + r edges → best = max(best, l + r).',
-           'Return 1 + max(l, r) to the parent.'],
+           'At every node the longest path THROUGH it has left + right edges → best = max(best, left + right).',
+           'Return 1 + max(left, right) to the parent.'],
      dry=['height(4) = 1, height(5) = 1',
-          'node 2: l=1, r=1 → best = 2, returns 2',
+          'node 2: left=1, right=1 → best = 2, returns 2',
           'height(3) = 1',
-          'node 1: l=2, r=1 → best = 3 ⇒ 3 (path 4-2-1-3)'])
+          'node 1: left=2, right=1 → best = 3 ⇒ 3 (path 4-2-1-3)'])
 def diameterOfBinaryTree(root):
     best = 0
 
@@ -59,7 +59,7 @@ def diameterOfBinaryTree(root):
      tests=[(lambda f: f(T([3, 9, 20, None, None, 15, 7])), True), (lambda f: f(None), True)],
      algo=['height(node) returns the height, or −1 if the subtree is unbalanced.',
            'If either child is −1, or their heights differ by more than 1 → −1.',
-           'Otherwise 1 + max(l, r). Balanced ⇔ height(root) ≠ −1.'],
+           'Otherwise 1 + max(left, right). Balanced ⇔ height(root) ≠ −1.'],
      dry=['leaves 4, 4 → 1 each → node 3 (left) = 2',
           'right 3 = 1 → node 2 (left): |2−1| ok → 3',
           'right 2 = 1 (leaf)',
@@ -144,11 +144,11 @@ def lowestCommonAncestor(root, p, q):
      expect=[[3], [9, 20], [15, 7]],
      tests=[(lambda f: f(None), []), (lambda f: f(T([1])), [[1]])],
      algo=['Queue starts with the root.',
-           'Each round: the queue holds exactly one level — pop q.size() nodes, collect their values.',
+           'Each round: the queue holds exactly one level — pop that many nodes, collect their values.',
            'Push each popped node’s children for the next level.'],
-     dry=['q=[3] → level [3], push 9, 20',
-          'q=[9,20] → level [9,20], push 15, 7',
-          'q=[15,7] → level [15,7] ⇒ [[3],[9,20],[15,7]]'])
+     dry=['queue [3] → level [3], push 9, 20',
+          'queue [9,20] → level [9,20], push 15, 7',
+          'queue [15,7] → level [15,7] ⇒ [[3],[9,20],[15,7]]'])
 def levelOrder(root):
     if not root:
         return []
@@ -169,7 +169,7 @@ def levelOrder(root):
 @sol(63, ex='root = [1, 2, 3, null, 5, null, 4]', run=lambda f: f(T([1, 2, 3, None, 5, None, 4])), expect=[1, 3, 4],
      tests=[(lambda f: f(T([1, 2])), [1, 2]), (lambda f: f(None), [])],
      algo=['BFS level by level; at the start of each level the queue holds exactly that level.',
-           'Its last node q[-1] is the one visible from the right → record it.',
+           'Its last node is the one visible from the right → record it.',
            'Pop the level, pushing children left-to-right.'],
      dry=['level [1] → see 1',
           'level [2, 3] → see 3',
@@ -234,7 +234,7 @@ def kthSmallest(root, k):
      tests=[(lambda f: TV(f([-1], [-1])), [-1]), (lambda f: TV(f([1, 2], [2, 1])), [1, 2])],
      algo=['index = value → position in inorder.',
            'Preorder gives roots in order: take the next value as the root of the current range.',
-           'Its inorder position splits the range: build left from [lo, mid−1] FIRST, then right from [mid+1, hi].'],
+           'Its inorder position splits the range: build left from [start, mid−1] FIRST, then right from [mid+1, end].'],
      dry=['root 3 (inorder idx 1) → left range [0,0], right [2,4]',
           'next 9 → idx 0 → leaf (left of 3)',
           'next 20 → idx 3 → left [2,2], right [4,4]',
@@ -259,9 +259,9 @@ def buildTree(preorder, inorder):
 @sol(67, ex='root = [-10, 9, 20, null, null, 15, 7]', run=lambda f: f(T([-10, 9, 20, None, None, 15, 7])), expect=42,
      tests=[(lambda f: f(T([-3])), -3), (lambda f: f(T([1, 2, 3])), 6), (lambda f: f(T([2, -1])), 2)],
      algo=['gain(node) = best downward path starting at node (may use only ONE child).',
-           'Ignore negative child gains: l = max(gain(left), 0), r = max(gain(right), 0).',
-           'A path that bends at node is node.val + l + r → update best.',
-           'Return node.val + max(l, r) to the parent. Start best at −inf.'],
+           'Ignore negative child gains: left = max(gain(node.left), 0), right = max(gain(node.right), 0).',
+           'A path that bends at node is node.val + left + right → update best.',
+           'Return node.val + max(left, right) to the parent. Start best at −inf.'],
      dry=['gain(9) = 9 → best 9',
           'gain(15) = 15 → best 15;  gain(7) = 7',
           'node 20: 20 + 15 + 7 = 42 → best 42; returns 20 + 15 = 35',
@@ -288,15 +288,15 @@ def maxPathSum(root):
      run=lambda C: play(C, [('insert', 'apple'), ('search', 'apple'), ('search', 'app'), ('startsWith', 'app'),
                             ('insert', 'app'), ('search', 'app')]),
      expect=[True, False, True, True],
-     algo=['Each node has children (char → node) and an end flag.',
-           'insert: walk/create a node per char; mark end on the last one.',
-           'search: walk the word; True only if it exists AND the last node has end set.',
+     algo=['Each node has children (char → node) and an isEnd flag.',
+           'insert: walk/create a node per char; set isEnd on the last one.',
+           'search: walk the word; True only if it exists AND the last node has isEnd set.',
            'startsWith: True if the walk succeeds at all.'],
-     dry=['insert apple → a→p→p→l→e, e.end = True',
-          'search apple → walk ok, end ✓ → True',
-          'search app → walk ok, but 2nd p.end is False → False',
+     dry=['insert apple → a→p→p→l→e, e.isEnd = True',
+          'search apple → walk ok, isEnd ✓ → True',
+          'search app → walk ok, but 2nd p.isEnd is False → False',
           'startsWith app → walk ok → True',
-          'insert app → 2nd p.end = True → search app → True'])
+          'insert app → 2nd p.isEnd = True → search app → True'])
 class Trie:
     class Node:
         def __init__(self):
@@ -333,7 +333,7 @@ class Trie:
                             ('search', 'bad'), ('search', '.ad'), ('search', 'b..')]),
      expect=[False, True, True, True],
      algo=['Same trie insert as Implement Trie.',
-           'search uses dfs(node, i): at the end of the word return node.end.',
+           'search uses dfs(word, i, node): at the end of the word return node.isEnd.',
            "Letter → follow that child (if missing → False). '.' → try every child; any success → True."],
      dry=["'pad': root has no 'p' → False",
           "'bad': b → a → d, end ✓ → True",

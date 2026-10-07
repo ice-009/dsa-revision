@@ -3,11 +3,20 @@
 // @@ 123
 class Solution {
     public int uniquePaths(int m, int n) {
+
+        // first row: one path to each cell
         int[] row = new int[n];
-        Arrays.fill(row, 1);  // first row: one path to each cell
-        for (int r = 1; r < m; r++)
-            for (int c = 1; c < n; c++)
-                row[c] += row[c - 1];  // from above (old row[c]) + from the left
+        for (int j = 0; j < n; j++) {
+            row[j] = 1;
+        }
+
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                // row[j] still holds the value from above; add the one from the left
+                row[j] += row[j - 1];
+            }
+        }
+
         return row[n - 1];
     }
 }
@@ -15,12 +24,26 @@ class Solution {
 // @@ 124
 class Solution {
     public int longestCommonSubsequence(String text1, String text2) {
-        int m = text1.length(), n = text2.length();
-        int[][] dp = new int[m + 1][n + 1];  // row/col 0 = empty prefix
-        for (int i = 1; i <= m; i++)
-            for (int j = 1; j <= n; j++)
-                dp[i][j] = text1.charAt(i - 1) == text2.charAt(j - 1) ? dp[i - 1][j - 1] + 1
-                        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+
+        int m = text1.length();
+        int n = text2.length();
+
+        // row 0 and column 0 stand for an empty prefix
+        int[][] dp = new int[m + 1][n + 1];
+
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+
+                if (text1.charAt(i - 1) == text2.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                }
+
+                else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
         return dp[m][n];
     }
 }
@@ -28,13 +51,22 @@ class Solution {
 // @@ 125
 class Solution {
     public int maxProfit(int[] prices) {
-        int hold = Integer.MIN_VALUE, sold = 0, rest = 0;  // own a stock / sold today / free to buy
-        for (int p : prices) {
-            int prevHold = hold, prevSold = sold, prevRest = rest;
-            hold = Math.max(prevHold, prevRest - p);
-            sold = prevHold + p;
+
+        int hold = Integer.MIN_VALUE;  // own a stock
+        int sold = 0;                  // sold today, must cool down tomorrow
+        int rest = 0;                  // no stock, free to buy
+
+        for (int price : prices) {
+
+            int prevHold = hold;
+            int prevSold = sold;
+            int prevRest = rest;
+
+            hold = Math.max(prevHold, prevRest - price);
+            sold = prevHold + price;
             rest = Math.max(prevRest, prevSold);
         }
+
         return Math.max(sold, rest);
     }
 }
@@ -42,11 +74,18 @@ class Solution {
 // @@ 126
 class Solution {
     public int change(int amount, int[] coins) {
-        int[] dp = new int[amount + 1];  // dp[a] = combinations making a
+
+        // dp[a] = number of combinations making a
+        int[] dp = new int[amount + 1];
         dp[0] = 1;
-        for (int c : coins)                  // coins outer: each combination counted once
-            for (int a = c; a <= amount; a++)  // upwards: coin can be reused
-                dp[a] += dp[a - c];
+
+        // coins in the outer loop: each combination is counted once
+        for (int coin : coins) {
+            for (int a = coin; a <= amount; a++) {
+                dp[a] += dp[a - coin];
+            }
+        }
+
         return dp[amount];
     }
 }
@@ -54,14 +93,32 @@ class Solution {
 // @@ 127
 class Solution {
     public int findTargetSumWays(int[] nums, int target) {
-        int total = Arrays.stream(nums).sum();
-        if (Math.abs(target) > total || (total + target) % 2 != 0) return 0;
-        int goal = (total + target) / 2;  // sum of the numbers that get '+'
+
+        int total = 0;
+        for (int num : nums) {
+            total += num;
+        }
+
+        if (Math.abs(target) > total) {
+            return 0;
+        }
+
+        if ((total + target) % 2 != 0) {
+            return 0;
+        }
+
+        // sum of the numbers that get '+'
+        int goal = (total + target) / 2;
+
         int[] dp = new int[goal + 1];
         dp[0] = 1;
-        for (int x : nums)
-            for (int t = goal; t >= x; t--)  // 0/1 knapsack counting
-                dp[t] += dp[t - x];
+
+        for (int num : nums) {
+            for (int sum = goal; sum >= num; sum--) {
+                dp[sum] += dp[sum - num];
+            }
+        }
+
         return dp[goal];
     }
 }
@@ -69,15 +126,30 @@ class Solution {
 // @@ 128
 class Solution {
     public boolean isInterleave(String s1, String s2, String s3) {
-        int m = s1.length(), n = s2.length();
-        if (m + n != s3.length()) return false;
+
+        int m = s1.length();
+        int n = s2.length();
+
+        if (m + n != s3.length()) {
+            return false;
+        }
+
         boolean[][] dp = new boolean[m + 1][n + 1];
         dp[0][0] = true;
-        for (int i = 0; i <= m; i++)
+
+        for (int i = 0; i <= m; i++) {
             for (int j = 0; j <= n; j++) {
-                if (i > 0 && dp[i - 1][j] && s1.charAt(i - 1) == s3.charAt(i + j - 1)) dp[i][j] = true;
-                if (j > 0 && dp[i][j - 1] && s2.charAt(j - 1) == s3.charAt(i + j - 1)) dp[i][j] = true;
+
+                if (i > 0 && dp[i - 1][j] && s1.charAt(i - 1) == s3.charAt(i + j - 1)) {
+                    dp[i][j] = true;
+                }
+
+                if (j > 0 && dp[i][j - 1] && s2.charAt(j - 1) == s3.charAt(i + j - 1)) {
+                    dp[i][j] = true;
+                }
             }
+        }
+
         return dp[m][n];
     }
 }
@@ -85,57 +157,124 @@ class Solution {
 // @@ 129
 class Solution {
     public int minDistance(String word1, String word2) {
-        int m = word1.length(), n = word2.length();
+
+        int m = word1.length();
+        int n = word2.length();
+
         int[][] dp = new int[m + 1][n + 1];
-        for (int i = 0; i <= m; i++) dp[i][0] = i;  // delete everything
-        for (int j = 0; j <= n; j++) dp[0][j] = j;  // insert everything
-        for (int i = 1; i <= m; i++)
+
+        // delete everything
+        for (int i = 0; i <= m; i++) {
+            dp[i][0] = i;
+        }
+
+        // insert everything
+        for (int j = 0; j <= n; j++) {
+            dp[0][j] = j;
+        }
+
+        for (int i = 1; i <= m; i++) {
             for (int j = 1; j <= n; j++) {
-                if (word1.charAt(i - 1) == word2.charAt(j - 1)) dp[i][j] = dp[i - 1][j - 1];
-                else dp[i][j] = 1 + Math.min(dp[i][j - 1],                    // insert
-                        Math.min(dp[i - 1][j], dp[i - 1][j - 1]));             // delete, replace
+
+                if (word1.charAt(i - 1) == word2.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1];
+                }
+
+                else {
+                    int insertCost = dp[i][j - 1];
+                    int deleteCost = dp[i - 1][j];
+                    int replaceCost = dp[i - 1][j - 1];
+
+                    dp[i][j] = 1 + Math.min(insertCost, Math.min(deleteCost, replaceCost));
+                }
             }
+        }
+
         return dp[m][n];
     }
 }
 
 // @@ 130
 class Solution {
-    private int[][] memo;  // 0 = not computed yet
-
     public int longestIncreasingPath(int[][] matrix) {
-        memo = new int[matrix.length][matrix[0].length];
+
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+
+        // 0 = not computed yet
+        int[][] memo = new int[rows][cols];
+
         int best = 0;
-        for (int r = 0; r < matrix.length; r++)
-            for (int c = 0; c < matrix[0].length; c++)
-                best = Math.max(best, dfs(matrix, r, c));
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                best = Math.max(best, dfs(matrix, memo, row, col));
+            }
+        }
+
         return best;
     }
 
-    private int dfs(int[][] m, int r, int c) {
-        if (memo[r][c] != 0) return memo[r][c];
-        int best = 1;
-        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-        for (int[] d : dirs) {
-            int nr = r + d[0], nc = c + d[1];
-            if (nr >= 0 && nc >= 0 && nr < m.length && nc < m[0].length && m[nr][nc] > m[r][c])
-                best = Math.max(best, 1 + dfs(m, nr, nc));
+    private int dfs(int[][] matrix, int[][] memo, int row, int col) {
+
+        if (memo[row][col] != 0) {
+            return memo[row][col];
         }
-        return memo[r][c] = best;
+
+        int rows = matrix.length;
+        int cols = matrix[0].length;
+
+        int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+        int best = 1;
+
+        for (int d = 0; d < 4; d++) {
+
+            int nextRow = row + dirs[d][0];
+            int nextCol = col + dirs[d][1];
+
+            if (nextRow < 0 || nextRow >= rows || nextCol < 0 || nextCol >= cols) {
+                continue;
+            }
+
+            if (matrix[nextRow][nextCol] > matrix[row][col]) {
+                best = Math.max(best, 1 + dfs(matrix, memo, nextRow, nextCol));
+            }
+        }
+
+        memo[row][col] = best;
+        return best;
     }
 }
 
 // @@ 131
 class Solution {
     public int numDistinct(String s, String t) {
-        int m = s.length(), n = t.length();
-        long[][] dp = new long[m + 1][n + 1];  // dp[i][j] = ways s[i:] contains t[j:]
-        for (int i = 0; i <= m; i++) dp[i][n] = 1;  // empty t: one way
-        for (int i = m - 1; i >= 0; i--)
+
+        int m = s.length();
+        int n = t.length();
+
+        // dp[i][j] = ways s[i:] contains t[j:]
+        long[][] dp = new long[m + 1][n + 1];
+
+        // empty t: one way
+        for (int i = 0; i <= m; i++) {
+            dp[i][n] = 1;
+        }
+
+        for (int i = m - 1; i >= 0; i--) {
             for (int j = n - 1; j >= 0; j--) {
-                dp[i][j] = dp[i + 1][j];                                    // skip s[i]
-                if (s.charAt(i) == t.charAt(j)) dp[i][j] += dp[i + 1][j + 1];  // use s[i]
+
+                // skip s[i]
+                dp[i][j] = dp[i + 1][j];
+
+                // use s[i]
+                if (s.charAt(i) == t.charAt(j)) {
+                    dp[i][j] += dp[i + 1][j + 1];
+                }
             }
+        }
+
         return (int) dp[0][0];
     }
 }
@@ -143,11 +282,18 @@ class Solution {
 // @@ 133
 class Solution {
     public int maxSubArray(int[] nums) {
-        int cur = nums[0], best = nums[0];
+
+        int curr = nums[0];
+        int best = nums[0];
+
         for (int i = 1; i < nums.length; i++) {
-            cur = Math.max(nums[i], cur + nums[i]);  // restart when the running sum hurts
-            best = Math.max(best, cur);
+
+            // restart at nums[i] when the running sum only drags it down
+            curr = Math.max(nums[i], curr + nums[i]);
+
+            best = Math.max(best, curr);
         }
+
         return best;
     }
 }
@@ -155,11 +301,18 @@ class Solution {
 // @@ 134
 class Solution {
     public boolean canJump(int[] nums) {
+
         int reach = 0;
+
         for (int i = 0; i < nums.length; i++) {
-            if (i > reach) return false;  // can't even get here
+
+            if (i > reach) {
+                return false;
+            }
+
             reach = Math.max(reach, i + nums[i]);
         }
+
         return true;
     }
 }
@@ -167,14 +320,22 @@ class Solution {
 // @@ 135
 class Solution {
     public int jump(int[] nums) {
-        int jumps = 0, end = 0, farthest = 0;
+
+        int jumps = 0;
+        int end = 0;
+        int farthest = 0;
+
         for (int i = 0; i < nums.length - 1; i++) {
+
             farthest = Math.max(farthest, i + nums[i]);
-            if (i == end) {  // current window used up: one more jump
+
+            // current window used up: one more jump
+            if (i == end) {
                 jumps++;
                 end = farthest;
             }
         }
+
         return jumps;
     }
 }
@@ -182,34 +343,66 @@ class Solution {
 // @@ 136
 class Solution {
     public int canCompleteCircuit(int[] gas, int[] cost) {
-        int total = 0, tank = 0, start = 0;
+
+        int total = 0;
+        int tank = 0;
+        int start = 0;
+
         for (int i = 0; i < gas.length; i++) {
+
             total += gas[i] - cost[i];
             tank += gas[i] - cost[i];
-            if (tank < 0) {  // no start in [start, i] works
+
+            // no station from start to i can be the answer
+            if (tank < 0) {
                 start = i + 1;
                 tank = 0;
             }
         }
-        return total < 0 ? -1 : start;
+
+        if (total < 0) {
+            return -1;
+        }
+
+        return start;
     }
 }
 
 // @@ 137
 class Solution {
     public boolean isNStraightHand(int[] hand, int groupSize) {
-        if (hand.length % groupSize != 0) return false;
-        TreeMap<Integer, Integer> count = new TreeMap<>();  // sorted by card value
-        for (int h : hand) count.merge(h, 1, Integer::sum);
+
+        if (hand.length % groupSize != 0) {
+            return false;
+        }
+
+        // TreeMap keeps card values sorted
+        TreeMap<Integer, Integer> count = new TreeMap<>();
+        for (int card : hand) {
+            count.put(card, count.getOrDefault(card, 0) + 1);
+        }
+
         for (int start : count.keySet()) {
-            int need = count.get(start);  // the smallest card must start `need` groups
-            if (need == 0) continue;
+
+            int need = count.get(start);
+
+            if (need == 0) {
+                continue;
+            }
+
+            // the smallest card must start `need` groups
             for (int card = start; card < start + groupSize; card++) {
+
                 int have = count.getOrDefault(card, 0);
-                if (have < need) return false;
+
+                if (have < need) {
+                    return false;
+                }
+
                 count.put(card, have - need);
             }
         }
+
         return true;
     }
 }
@@ -217,17 +410,27 @@ class Solution {
 // @@ 138
 class Solution {
     public List<Integer> partitionLabels(String s) {
+
         int[] last = new int[26];
-        for (int i = 0; i < s.length(); i++) last[s.charAt(i) - 'a'] = i;
-        List<Integer> sizes = new ArrayList<>();
-        int start = 0, end = 0;
         for (int i = 0; i < s.length(); i++) {
+            last[s.charAt(i) - 'a'] = i;
+        }
+
+        List<Integer> sizes = new ArrayList<>();
+        int start = 0;
+        int end = 0;
+
+        for (int i = 0; i < s.length(); i++) {
+
             end = Math.max(end, last[s.charAt(i) - 'a']);
-            if (i == end) {  // everything inside has finished appearing
+
+            // every letter inside has finished appearing
+            if (i == end) {
                 sizes.add(end - start + 1);
                 start = i + 1;
             }
         }
+
         return sizes;
     }
 }

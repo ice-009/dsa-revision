@@ -5,12 +5,12 @@ from _harness import *
 @sol(3, ex='nums = [1, 2, 3, 1]', run=lambda f: f([1, 2, 3, 1]), expect=True,
      tests=[(lambda f: f([1, 2, 3, 4]), False), (lambda f: f([]), False)],
      algo=['Create an empty set seen.',
-           'For each x in nums: if x is in seen return True, otherwise add x.',
+           'For each num in nums: if num is in seen return True, otherwise add num.',
            'Loop finishes without a repeat → return False.'],
-     dry=['x=1 → not in {} → seen={1}',
-          'x=2 → not in seen → seen={1,2}',
-          'x=3 → not in seen → seen={1,2,3}',
-          'x=1 → already in seen → return True'])
+     dry=['num=1 → not in {} → seen={1}',
+          'num=2 → not in seen → seen={1,2}',
+          'num=3 → not in seen → seen={1,2,3}',
+          'num=1 → already in seen → return True'])
 def containsDuplicate(nums):
     seen = set()
     for x in nums:
@@ -83,12 +83,12 @@ def groupAnagrams(strs):
 @sol(7, ex='nums = [1,1,1,2,2,3], k = 2', run=lambda f: f([1, 1, 1, 2, 2, 3], 2), expect=[1, 2], norm='sorted',
      tests=[(lambda f: f([1], 1), [1]), (lambda f: f([4, 4, 5, 5, 5, 6], 2), [4, 5])],
      algo=['count[x] = how often each number appears (hash map).',
-           'buckets[f] = numbers that appear exactly f times (f ≤ n).',
-           'Walk buckets from high f to low, collecting numbers until k are taken.'],
+           'buckets[freq] = numbers that appear exactly freq times (freq ≤ n).',
+           'Walk buckets from high freq to low, collecting numbers into ans until k are taken.'],
      dry=['count = {1:3, 2:2, 3:1}',
           'buckets[3]=[1], buckets[2]=[2], buckets[1]=[3]',
-          'f=6..4 empty; f=3 → res=[1]',
-          'f=2 → res=[1,2] → len == k → return [1,2]'])
+          'freq=6..4 empty; freq=3 → ans=[1]',
+          'freq=2 → ans=[1,2] → len == k → return [1,2]'])
 def topKFrequent(nums, k):
     count = Counter(nums)
     buckets = [[] for _ in range(len(nums) + 1)]
@@ -105,14 +105,14 @@ def topKFrequent(nums, k):
 
 @sol(8, ex='nums = [1, 2, 3, 4]', run=lambda f: f([1, 2, 3, 4]), expect=[24, 12, 8, 6],
      tests=[(lambda f: f([-1, 1, 0, -3, 3]), [0, 0, 9, 0, 0])],
-     algo=['res[i] starts as the product of everything LEFT of i (forward pass, running prefix).',
-           'Backward pass with running suffix: res[i] *= suffix, then suffix *= nums[i].',
+     algo=['ans[i] starts as the product of everything LEFT of i (forward pass, running prefix).',
+           'Backward pass with running suffix: ans[i] *= suffix, then suffix *= nums[i].',
            'No division, so zeros are handled naturally.'],
-     dry=['forward: prefix 1→1→2→6 ⇒ res = [1, 1, 2, 6]',
-          'i=3: res[3]=6·1=6, suffix=4',
-          'i=2: res[2]=2·4=8, suffix=12',
-          'i=1: res[1]=1·12=12, suffix=24',
-          'i=0: res[0]=1·24=24 ⇒ [24, 12, 8, 6]'])
+     dry=['forward: prefix 1→1→2→6 ⇒ ans = [1, 1, 2, 6]',
+          'i=3: ans[3]=6·1=6, suffix=4',
+          'i=2: ans[2]=2·4=8, suffix=12',
+          'i=1: ans[1]=1·12=12, suffix=24',
+          'i=0: ans[0]=1·24=24 ⇒ [24, 12, 8, 6]'])
 def productExceptSelf(nums):
     n = len(nums)
     res = [1] * n
@@ -145,9 +145,9 @@ _SUDOKU_BAD[0][0] = '8'
 @sol(9, ex='LeetCode example 2: example 1 board with the top-left 5 changed to 8',
      run=lambda f: f(_SUDOKU_BAD), expect=False,
      tests=[(lambda f: f(_SUDOKU), True)],
-     algo=['Keep a set per row, per column and per 3×3 box (box id = (r / 3) · 3 + c / 3, integer division).',
-           'Scan every filled cell v: if v is already in its row, column or box set → False.',
-           'Otherwise add v to all three sets. Finish the scan → True.'],
+     algo=['Keep a seen-table per row, per column and per 3×3 box (box = (i / 3) · 3 + j / 3, integer division).',
+           'Scan every filled cell digit: if it is already in its row, column or box → False.',
+           'Otherwise mark it in all three. Finish the scan → True.'],
      dry=["(0,0)='8' → row0={8}, col0={8}, box(0,0)={8}",
           "(0,1)='3', (0,4)='7' → added",
           "(1,0)='6', (1,3)='1', (1,4)='9', (1,5)='5' → added",
@@ -171,19 +171,20 @@ def isValidSudoku(board):
 
 @sol(10, ex='s = "3[a2[c]]"', run=lambda f: f('3[a2[c]]'), expect='accaccacc',
      tests=[(lambda f: f('2[abc]3[cd]ef'), 'abcabccdcdcdef'), (lambda f: f('10[a]'), 'a' * 10)],
-     algo=['cur = string being built at this depth, k = number being read.',
-           "Digit → k = k*10 + digit (multi-digit counts).",
-           "'[' → push (cur, k), start fresh: cur='', k=0.",
-           "']' → pop (prev, times): cur = prev + cur*times.",
-           'Letter → cur += letter. Answer is cur.'],
-     dry=["'3' → k=3",
-          "'[' → push ('',3); cur='', k=0",
-          "'a' → cur='a'",
-          "'2' → k=2",
-          "'[' → push ('a',2); cur=''",
-          "'c' → cur='c'",
-          "']' → pop ('a',2) → cur='a'+'cc'='acc'",
-          "']' → pop ('',3) → cur='accaccacc'"])
+     algo=['Two stacks: nums (repeat counts) and strs (string before each \'[\').',
+           'ans = string being built at this depth, num = number being read.',
+           "Digit → num = num*10 + digit (multi-digit counts).",
+           "'[' → push num and ans, start fresh: num=0, ans=''.",
+           "']' → pop times and temp; do temp += ans that many times; ans = temp.",
+           'Letter → ans += letter. Answer is ans.'],
+     dry=["'3' → num=3",
+          "'[' → nums=[3], strs=['']; num=0, ans=''",
+          "'a' → ans='a'",
+          "'2' → num=2",
+          "'[' → nums=[3,2], strs=['','a']; ans=''",
+          "'c' → ans='c'",
+          "']' → pop 2 and 'a' → ans='a'+'cc'='acc'",
+          "']' → pop 3 and '' → ans='accaccacc'"])
 def decodeString(s):
     stack = []
     cur, k = '', 0
@@ -203,10 +204,10 @@ def decodeString(s):
 
 @sol(11, ex='nums = [100, 4, 200, 1, 3, 2]', run=lambda f: f([100, 4, 200, 1, 3, 2]), expect=4,
      tests=[(lambda f: f([0, 3, 7, 2, 5, 8, 4, 6, 0, 1]), 9), (lambda f: f([]), 0)],
-     algo=['s = hash set of all the numbers.',
-           'For each x in s: only if x−1 is NOT in s (x starts a run), walk y = x, x+1, … while present.',
-           'best = max(best, run length).'],
-     dry=['s = {100, 4, 200, 1, 3, 2}',
+     algo=['numSet = hash set of all the numbers.',
+           'For each num: only if num−1 is NOT in numSet (num starts a run), walk curr = num, num+1, … while present.',
+           'best = max(best, curr − num + 1).'],
+     dry=['numSet = {100, 4, 200, 1, 3, 2}',
           '100: 99 missing → run [100] → len 1',
           '4: 3 present → not a start, skip',
           '200: run [200] → len 1',
@@ -228,14 +229,14 @@ def longestConsecutive(nums):
 
 @sol(13, ex='s = "race a car"', run=lambda f: f('race a car'), expect=False,
      tests=[(lambda f: f('A man, a plan, a canal: Panama'), True), (lambda f: f(' '), True)],
-     algo=['l = 0, r = len−1.',
-           'Skip non-alphanumeric chars from both ends (keep l < r).',
-           'Compare lowercased s[l] and s[r]; mismatch → False. Move both inward.',
+     algo=['left = 0, right = len−1.',
+           'Skip non-alphanumeric chars from both ends (keep left < right).',
+           'Compare lowercased s[left] and s[right]; mismatch → False. Move both inward.',
            'Pointers meet → True.'],
-     dry=["l=0 'r' vs r=9 'r' → equal",
-          "l=1 'a' vs r=8 'a' → equal",
-          "l=2 'c' vs r=7 'c' → equal",
-          "l=3 'e'; r=6 is ' ' → skip to r=5 'a'",
+     dry=["left=0 'r' vs right=9 'r' → equal",
+          "left=1 'a' vs right=8 'a' → equal",
+          "left=2 'c' vs right=7 'c' → equal",
+          "left=3 'e'; right=6 is ' ' → skip to right=5 'a'",
           "'e' ≠ 'a' → return False"])
 def isPalindrome(s):
     l, r = 0, len(s) - 1
@@ -252,12 +253,12 @@ def isPalindrome(s):
 
 @sol(14, ex='numbers = [2, 7, 11, 15], target = 9', run=lambda f: f([2, 7, 11, 15], 9), expect=[1, 2],
      tests=[(lambda f: f([2, 3, 4], 6), [1, 3]), (lambda f: f([-1, 0], -1), [1, 2])],
-     algo=['l = 0, r = len−1 on the sorted array.',
-           'sum = a[l] + a[r]. Too small → l += 1; too big → r −= 1.',
-           'Equal → return [l+1, r+1] (1-indexed).'],
-     dry=['l=0, r=3: 2+15=17 > 9 → r=2',
-          'l=0, r=2: 2+11=13 > 9 → r=1',
-          'l=0, r=1: 2+7=9 → return [1, 2]'])
+     algo=['left = 0, right = len−1 on the sorted array.',
+           'sum = a[left] + a[right]. Too small → left++; too big → right−−.',
+           'Equal → return [left+1, right+1] (1-indexed).'],
+     dry=['left=0, right=3: 2+15=17 > 9 → right=2',
+          'left=0, right=2: 2+11=13 > 9 → right=1',
+          'left=0, right=1: 2+7=9 → return [1, 2]'])
 def twoSumII(numbers, target):
     l, r = 0, len(numbers) - 1
     while l < r:
@@ -276,14 +277,14 @@ def twoSumII(numbers, target):
      tests=[(lambda f: f([0, 0, 0, 0]), [[0, 0, 0]]), (lambda f: f([0, 1, 1]), [])],
      algo=['Sort nums.',
            'For each i: stop if nums[i] > 0; skip if nums[i] equals nums[i−1] (same first number).',
-           'Two pointers l=i+1, r=end: sum < 0 → l++, sum > 0 → r−−.',
-           'sum == 0 → record, move both, and skip duplicate values of nums[l].'],
+           'Two pointers left=i+1, right=end: sum < 0 → left++, sum > 0 → right−−.',
+           'sum == 0 → add to ans, move both, and skip duplicate values of nums[left].'],
      dry=['sorted: [-4, -1, -1, 0, 1, 2]',
           'i=0 (-4): best sum is -4+1+2 = -1 < 0 → nothing',
-          'i=1 (-1): l=2,r=5: -1-1+2=0 → add [-1,-1,2]; l=3,r=4',
-          '         l=3,r=4: -1+0+1=0 → add [-1,0,1]; l=4,r=3 stop',
+          'i=1 (-1): left=2,right=5: -1-1+2=0 → add [-1,-1,2]; left=3,right=4',
+          '         left=3,right=4: -1+0+1=0 → add [-1,0,1]; left=4,right=3 stop',
           'i=2 (-1): same as nums[1] → skip',
-          'i=3 (0): l=4,r=5: 0+1+2=3 > 0 → r=4 → stop'])
+          'i=3 (0): left=4,right=5: 0+1+2=3 > 0 → right=4 → stop'])
 def threeSum(nums):
     nums.sort()
     res = []
@@ -309,14 +310,14 @@ def threeSum(nums):
 
 @sol(16, ex='height = [1, 8, 6, 2, 5, 4, 8, 3, 7]', run=lambda f: f([1, 8, 6, 2, 5, 4, 8, 3, 7]), expect=49,
      tests=[(lambda f: f([1, 1]), 1)],
-     algo=['l = 0, r = len−1, best = 0.',
-           'area = min(h[l], h[r]) × (r − l); best = max(best, area).',
+     algo=['left = 0, right = len−1, best = 0.',
+           'area = min(h[left], h[right]) × (right − left); best = max(best, area).',
            'Move the SHORTER side inward (moving the taller one can never help).'],
-     dry=['l=0(1) r=8(7): 1×8=8 → move l',
-          'l=1(8) r=8(7): 7×7=49 ★ → move r',
-          'r=7(3): 3×6=18 → move r',
-          'r=6(8): 8×5=40 → equal, move r',
-          'r=5(4): 16, r=4(5): 15, r=3(2): 4, r=2(6): 6 → best = 49'])
+     dry=['left=0(1) right=8(7): 1×8=8 → move left',
+          'left=1(8) right=8(7): 7×7=49 ★ → move right',
+          'right=7(3): 3×6=18 → move right',
+          'right=6(8): 8×5=40 → equal, move right',
+          'right=5(4): 16, 4(5): 15, 3(2): 4, 2(6): 6 → best = 49'])
 def maxArea(height):
     l, r = 0, len(height) - 1
     best = 0
@@ -332,14 +333,14 @@ def maxArea(height):
 @sol(17, ex='height = [4, 2, 0, 3, 2, 5]', run=lambda f: f([4, 2, 0, 3, 2, 5]), expect=9,
      tests=[(lambda f: f([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]), 6), (lambda f: f([]), 0)],
      algo=['Water above i = min(maxLeft, maxRight) − h[i].',
-           'l, r at both ends with leftMax, rightMax.',
-           'If h[l] < h[r]: the left side is the bottleneck → update leftMax, add leftMax − h[l], l++.',
-           'Else do the same on the right side. Stop when l meets r.'],
-     dry=['l=0(4) < r=5(5): left_max=4, +0, l=1',
-          'h[1]=2 < 5: +4−2=2 → water=2, l=2',
-          'h[2]=0 < 5: +4 → water=6, l=3',
-          'h[3]=3 < 5: +1 → water=7, l=4',
-          'h[4]=2 < 5: +2 → water=9, l=5 = r → stop ⇒ 9'])
+           'left, right at both ends with leftMax, rightMax.',
+           'If h[left] < h[right]: the left side is the bottleneck → update leftMax, add leftMax − h[left], left++.',
+           'Else do the same on the right side. Stop when left meets right.'],
+     dry=['left=0(4) < right=5(5): leftMax=4, +0, left=1',
+          'h[1]=2 < 5: +4−2=2 → water=2, left=2',
+          'h[2]=0 < 5: +4 → water=6, left=3',
+          'h[3]=3 < 5: +1 → water=7, left=4',
+          'h[4]=2 < 5: +2 → water=9, left=5 = right → stop ⇒ 9'])
 def trap(height):
     l, r = 0, len(height) - 1
     left_max = right_max = water = 0

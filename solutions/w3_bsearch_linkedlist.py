@@ -4,12 +4,12 @@ from _harness import *
 
 @sol(34, ex='nums = [-1, 0, 3, 5, 9, 12], target = 9', run=lambda f: f([-1, 0, 3, 5, 9, 12], 9), expect=4,
      tests=[(lambda f: f([-1, 0, 3, 5, 9, 12], 2), -1), (lambda f: f([5], 5), 0)],
-     algo=['l = 0, r = n−1. While l ≤ r: mid = l + (r − l) / 2.',
+     algo=['left = 0, right = n−1. While left ≤ right: mid = left + (right − left) / 2.',
            'nums[mid] == target → return mid.',
-           'nums[mid] < target → search right (l = mid+1); else search left (r = mid−1).',
+           'nums[mid] < target → search right (left = mid+1); else search left (right = mid−1).',
            'Loop ends → −1.'],
-     dry=['l=0 r=5 mid=2 (3) < 9 → l=3',
-          'l=3 r=5 mid=4 (9) == 9 → return 4'])
+     dry=['left=0 right=5 mid=2 (3) < 9 → left=3',
+          'left=3 right=5 mid=4 (9) == 9 → return 4'])
 def search(nums, target):
     l, r = 0, len(nums) - 1
     while l <= r:
@@ -28,10 +28,10 @@ def search(nums, target):
      tests=[(lambda f: f([[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 13), False), (lambda f: f([[1]], 1), True)],
      algo=['Treat the matrix as one sorted array of rows × cols cells.',
            'Binary search index mid in [0, rows·cols − 1]; its cell is matrix[mid / cols][mid % cols].',
-           'Compare and move l / r as in normal binary search.'],
-     dry=['l=0 r=11 mid=5 → (1,1)=11 > 3 → r=4',
-          'mid=2 → (0,2)=5 > 3 → r=1',
-          'mid=0 → (0,0)=1 < 3 → l=1',
+           'Compare and move left / right as in normal binary search.'],
+     dry=['left=0 right=11 mid=5 → (1,1)=11 > 3 → right=4',
+          'mid=2 → (0,2)=5 > 3 → right=1',
+          'mid=0 → (0,0)=1 < 3 → left=1',
           'mid=1 → (0,1)=3 → True'])
 def searchMatrix(matrix, target):
     rows, cols = len(matrix), len(matrix[0])
@@ -50,15 +50,15 @@ def searchMatrix(matrix, target):
 
 @sol(36, ex='piles = [3, 6, 7, 11], h = 8', run=lambda f: f([3, 6, 7, 11], 8), expect=4,
      tests=[(lambda f: f([30, 11, 23, 4, 20], 5), 30), (lambda f: f([30, 11, 23, 4, 20], 6), 23)],
-     algo=['Answer k lies in [1, max(piles)]; hours(k) = Σ ceil(p / k) only falls as k grows.',
-           'Binary search for the smallest k with hours(k) ≤ h:',
-           'feasible → hi = k (k might be the answer); not feasible → lo = k + 1.',
-           'When lo == hi, that is the minimum speed.'],
-     dry=['lo=1 hi=11 k=6 → 1+1+2+2=6 ≤ 8 → hi=6',
-          'k=3 → 1+2+3+4=10 > 8 → lo=4',
-          'k=5 → 1+2+2+3=8 ≤ 8 → hi=5',
-          'k=4 → 1+2+2+3=8 ≤ 8 → hi=4',
-          'lo == hi == 4 ⇒ 4'])
+     algo=['Answer speed lies in [1, max(piles)]; hours(speed) = Σ ceil(pile / speed) only falls as speed grows.',
+           'Binary search for the smallest speed with hours(speed) ≤ h:',
+           'feasible → right = speed (it might be the answer); not feasible → left = speed + 1.',
+           'When left == right, that is the minimum speed.'],
+     dry=['left=1 right=11 speed=6 → 1+1+2+2=6 ≤ 8 → right=6',
+          'speed=3 → 1+2+3+4=10 > 8 → left=4',
+          'speed=5 → 1+2+2+3=8 ≤ 8 → right=5',
+          'speed=4 → 1+2+2+3=8 ≤ 8 → right=4',
+          'left == right == 4 ⇒ 4'])
 def minEatingSpeed(piles, h):
     lo, hi = 1, max(piles)
     while lo < hi:
@@ -73,13 +73,13 @@ def minEatingSpeed(piles, h):
 
 @sol(37, ex='nums = [3, 4, 5, 1, 2]', run=lambda f: f([3, 4, 5, 1, 2]), expect=1,
      tests=[(lambda f: f([4, 5, 6, 7, 0, 1, 2]), 0), (lambda f: f([11, 13, 15, 17]), 11), (lambda f: f([2, 1]), 1)],
-     algo=['l = 0, r = n−1. While l < r: mid.',
-           'nums[mid] > nums[r] → the drop (minimum) is right of mid → l = mid + 1.',
-           'Else the minimum is at mid or to its left → r = mid.',
-           'Return nums[l].'],
-     dry=['l=0 r=4 mid=2 (5) > 2 → l=3',
-          'l=3 r=4 mid=3 (1) ≤ 2 → r=3',
-          'l == r → nums[3] = 1'])
+     algo=['left = 0, right = n−1. While left < right: mid.',
+           'nums[mid] > nums[right] → the drop (minimum) is right of mid → left = mid + 1.',
+           'Else the minimum is at mid or to its left → right = mid.',
+           'Return nums[left].'],
+     dry=['left=0 right=4 mid=2 (5) > 2 → left=3',
+          'left=3 right=4 mid=3 (1) ≤ 2 → right=3',
+          'left == right → nums[3] = 1'])
 def findMin(nums):
     l, r = 0, len(nums) - 1
     while l < r:
@@ -94,10 +94,10 @@ def findMin(nums):
 @sol(38, ex='nums = [4, 5, 6, 7, 0, 1, 2], target = 0', run=lambda f: f([4, 5, 6, 7, 0, 1, 2], 0), expect=4,
      tests=[(lambda f: f([4, 5, 6, 7, 0, 1, 2], 3), -1), (lambda f: f([1], 0), -1), (lambda f: f([3, 1], 1), 1)],
      algo=['Standard binary search loop; found → return mid.',
-           'If nums[l] ≤ nums[mid], the LEFT half is sorted: go left if nums[l] ≤ target < nums[mid], else right.',
-           'Otherwise the RIGHT half is sorted: go right if nums[mid] < target ≤ nums[r], else left.'],
-     dry=['l=0 r=6 mid=3 (7): left [4..7] sorted, 0 not in it → l=4',
-          'l=4 r=6 mid=5 (1): left [0..1] sorted, 0 in [0,1) → r=4',
+           'If nums[left] ≤ nums[mid], the LEFT half is sorted: go left if nums[left] ≤ target < nums[mid], else right.',
+           'Otherwise the RIGHT half is sorted: go right if nums[mid] < target ≤ nums[right], else left.'],
+     dry=['left=0 right=6 mid=3 (7): left [4..7] sorted, 0 not in it → left=4',
+          'left=4 right=6 mid=5 (1): left [0..1] sorted, 0 in [0,1) → right=4',
           'mid=4 (0) == target → return 4'])
 def searchRotated(nums, target):
     l, r = 0, len(nums) - 1
@@ -123,14 +123,14 @@ def searchRotated(nums, target):
                             ('get', 'foo', 4), ('get', 'foo', 5), ('get', 'foo', 0)]),
      expect=['bar', 'bar', 'bar2', 'bar2', ''],
      algo=['store[key] = list of (timestamp, value); timestamps arrive increasing, so it stays sorted.',
-           'get: binary search for the first entry with time > timestamp (index lo).',
-           'Answer is the entry just before it (lo − 1), or "" if lo == 0.'],
+           'get: binary search for the last entry with time ≤ timestamp, saving its value in ans.',
+           'Return ans ("" if every time is > timestamp).'],
      dry=['set → foo: [(1,bar)]',
-          'get(1): first time > 1 is index 1 → entry 0 → "bar"',
-          'get(3) → index 1 → "bar"',
+          'get(1): time 1 ≤ 1 → ans = "bar"',
+          'get(3): time 1 ≤ 3 → ans = "bar"',
           'set → foo: [(1,bar), (4,bar2)]',
-          'get(4) / get(5) → index 2 → "bar2"',
-          'get(0) → index 0 → ""'])
+          'get(4) / get(5): last time ≤ t is 4 → "bar2"',
+          'get(0): no time ≤ 0 → ""'])
 class TimeMap:
     def __init__(self):
         self.store = defaultdict(list)
@@ -153,14 +153,14 @@ class TimeMap:
 @sol(40, ex='nums1 = [1, 3], nums2 = [2]', run=lambda f: f([1, 3], [2]), expect=2.0,
      tests=[(lambda f: f([1, 2], [3, 4]), 2.5), (lambda f: f([], [1]), 1.0), (lambda f: f([0, 0], [0, 0]), 0.0),
             (lambda f: f([1, 2, 3, 4, 5], [6, 7, 8]), 4.5)],
-     algo=['Let A be the shorter array. The left half of the merged array has half = (m+n+1) / 2 items.',
-           'Binary search i = items taken from A (0..m); j = half − i from B.',
-           'Valid cut when A[i−1] ≤ B[j] and B[j−1] ≤ A[i] (missing sides are ±inf).',
-           'If A[i−1] > B[j] take fewer from A (hi = i−1), else more (lo = i+1).',
+     algo=['Make nums1 the shorter array. The left half of the merged array has half = (m+n+1) / 2 items.',
+           'Binary search i = items taken from nums1 (0..m); j = half − i from nums2.',
+           'left1 = nums1[i−1], right1 = nums1[i], left2 = nums2[j−1], right2 = nums2[j] (missing sides are ±inf).',
+           'Valid cut when left1 ≤ right2 and left2 ≤ right1. If left1 > right2 take fewer from nums1 (high = i−1), else more (low = i+1).',
            'Odd total → max of the lefts; even → average of max(lefts) and min(rights).'],
-     dry=['A=[2], B=[1,3], half=2',
-          'i=0, j=2: A_left=-inf, A_right=2, B_left=3 → 3 > 2 → lo=1',
-          'i=1, j=1: A_left=2, A_right=inf, B_left=1, B_right=3 → valid',
+     dry=['nums1=[2], nums2=[1,3], half=2',
+          'i=0, j=2: left1=-inf, right1=2, left2=3 → 3 > 2 → low=1',
+          'i=1, j=1: left1=2, right1=inf, left2=1, right2=3 → valid',
           'total 3 is odd → max(2, 1) = 2.0'])
 def findMedianSortedArrays(nums1, nums2):
     A, B = nums1, nums2
@@ -190,12 +190,12 @@ def findMedianSortedArrays(nums1, nums2):
 
 @sol(42, ex='head = 1 → 2 → 3', run=lambda f: LV(f(L([1, 2, 3]))), expect=[3, 2, 1],
      tests=[(lambda f: LV(f(L([]))), []), (lambda f: LV(f(L([1]))), [1])],
-     algo=['prev = None, cur = head.',
-           'Save nxt = cur.next, point cur.next back to prev.',
-           'Advance: prev = cur, cur = nxt. When cur is None, prev is the new head.'],
-     dry=['cur=1: 1 → None; prev=1, cur=2',
-          'cur=2: 2 → 1; prev=2, cur=3',
-          'cur=3: 3 → 2; prev=3, cur=None',
+     algo=['prev = None, curr = head.',
+           'Save next = curr.next, point curr.next back to prev.',
+           'Advance: prev = curr, curr = next. When curr is None, prev is the new head.'],
+     dry=['curr=1: 1 → None; prev=1, curr=2',
+          'curr=2: 2 → 1; prev=2, curr=3',
+          'curr=3: 3 → 2; prev=3, curr=None',
           'return 3 → 2 → 1'])
 def reverseList(head):
     prev, cur = None, head

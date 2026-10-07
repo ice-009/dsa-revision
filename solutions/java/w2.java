@@ -3,11 +3,15 @@
 // @@ 19
 class Solution {
     public int maxProfit(int[] prices) {
-        int lowest = Integer.MAX_VALUE, best = 0;
-        for (int p : prices) {
-            lowest = Math.min(lowest, p);
-            best = Math.max(best, p - lowest);
+
+        int lowest = Integer.MAX_VALUE;
+        int best = 0;
+
+        for (int price : prices) {
+            lowest = Math.min(lowest, price);
+            best = Math.max(best, price - lowest);
         }
+
         return best;
     }
 }
@@ -15,15 +19,25 @@ class Solution {
 // @@ 20
 class Solution {
     public int lengthOfLongestSubstring(String s) {
+
         int[] last = new int[128];  // last index of each character
         Arrays.fill(last, -1);
-        int l = 0, best = 0;
-        for (int r = 0; r < s.length(); r++) {
-            char c = s.charAt(r);
-            if (last[c] >= 0) l = Math.max(l, last[c] + 1);
-            last[c] = r;
-            best = Math.max(best, r - l + 1);
+
+        int left = 0;
+        int best = 0;
+
+        for (int right = 0; right < s.length(); right++) {
+
+            char ch = s.charAt(right);
+
+            if (last[ch] >= left) {
+                left = last[ch] + 1;
+            }
+
+            last[ch] = right;
+            best = Math.max(best, right - left + 1);
         }
+
         return best;
     }
 }
@@ -31,16 +45,26 @@ class Solution {
 // @@ 21
 class Solution {
     public int characterReplacement(String s, int k) {
+
         int[] count = new int[26];
-        int l = 0, maxF = 0, best = 0;
-        for (int r = 0; r < s.length(); r++) {
-            maxF = Math.max(maxF, ++count[s.charAt(r) - 'A']);
-            while ((r - l + 1) - maxF > k) {
-                count[s.charAt(l) - 'A']--;
-                l++;
+
+        int left = 0;
+        int maxFreq = 0;
+        int best = 0;
+
+        for (int right = 0; right < s.length(); right++) {
+
+            count[s.charAt(right) - 'A']++;
+            maxFreq = Math.max(maxFreq, count[s.charAt(right) - 'A']);
+
+            while ((right - left + 1) - maxFreq > k) {
+                count[s.charAt(left) - 'A']--;
+                left++;
             }
-            best = Math.max(best, r - l + 1);
+
+            best = Math.max(best, right - left + 1);
         }
+
         return best;
     }
 }
@@ -48,19 +72,36 @@ class Solution {
 // @@ 22
 class Solution {
     public boolean checkInclusion(String s1, String s2) {
+
         int n = s1.length();
-        if (n > s2.length()) return false;
-        int[] need = new int[26], window = new int[26];
+        int m = s2.length();
+
+        if (n > m) {
+            return false;
+        }
+
+        int[] need = new int[26];
+        int[] window = new int[26];
+
         for (int i = 0; i < n; i++) {
             need[s1.charAt(i) - 'a']++;
             window[s2.charAt(i) - 'a']++;
         }
-        if (Arrays.equals(need, window)) return true;
-        for (int r = n; r < s2.length(); r++) {
-            window[s2.charAt(r) - 'a']++;
-            window[s2.charAt(r - n) - 'a']--;
-            if (Arrays.equals(need, window)) return true;
+
+        if (Arrays.equals(need, window)) {
+            return true;
         }
+
+        for (int right = n; right < m; right++) {
+
+            window[s2.charAt(right) - 'a']++;
+            window[s2.charAt(right - n) - 'a']--;
+
+            if (Arrays.equals(need, window)) {
+                return true;
+            }
+        }
+
         return false;
     }
 }
@@ -68,118 +109,219 @@ class Solution {
 // @@ 23
 class Solution {
     public int[] maxSlidingWindow(int[] nums, int k) {
-        Deque<Integer> q = new ArrayDeque<>();  // indices, values decreasing
-        int[] res = new int[nums.length - k + 1];
-        for (int r = 0; r < nums.length; r++) {
-            while (!q.isEmpty() && nums[q.peekLast()] < nums[r]) q.pollLast();
-            q.offerLast(r);
-            if (q.peekFirst() <= r - k) q.pollFirst();
-            if (r >= k - 1) res[r - k + 1] = nums[q.peekFirst()];
+
+        Deque<Integer> dq = new ArrayDeque<>();  // indices, values decreasing from front to back
+        int[] ans = new int[nums.length - k + 1];
+
+        for (int right = 0; right < nums.length; right++) {
+
+            while (!dq.isEmpty() && nums[dq.peekLast()] < nums[right]) {
+                dq.pollLast();
+            }
+
+            dq.offerLast(right);
+
+            if (dq.peekFirst() <= right - k) {
+                dq.pollFirst();
+            }
+
+            if (right >= k - 1) {
+                ans[right - k + 1] = nums[dq.peekFirst()];
+            }
         }
-        return res;
+
+        return ans;
     }
 }
 
 // @@ 24
 class Solution {
     public String minWindow(String s, String t) {
-        if (s.isEmpty() || t.isEmpty()) return "";
-        int[] need = new int[128], window = new int[128];
+
+        if (s.isEmpty() || t.isEmpty()) {
+            return "";
+        }
+
+        int[] need = new int[128];
+        int[] window = new int[128];
+
         int required = 0;
-        for (char c : t.toCharArray())
-            if (need[c]++ == 0) required++;
-        int have = 0, bestLen = Integer.MAX_VALUE, bestL = 0, l = 0;
-        for (int r = 0; r < s.length(); r++) {
-            char c = s.charAt(r);
-            if (++window[c] == need[c]) have++;
+        for (char ch : t.toCharArray()) {
+            if (need[ch] == 0) {
+                required++;
+            }
+            need[ch]++;
+        }
+
+        int have = 0;
+        int left = 0;
+        int bestLen = Integer.MAX_VALUE;
+        int bestStart = 0;
+
+        for (int right = 0; right < s.length(); right++) {
+
+            char ch = s.charAt(right);
+            window[ch]++;
+
+            if (window[ch] == need[ch]) {
+                have++;
+            }
+
             while (have == required) {
-                if (r - l + 1 < bestLen) {
-                    bestLen = r - l + 1;
-                    bestL = l;
+
+                if (right - left + 1 < bestLen) {
+                    bestLen = right - left + 1;
+                    bestStart = left;
                 }
-                char d = s.charAt(l++);
-                if (window[d]-- == need[d]) have--;
+
+                char out = s.charAt(left);
+                if (window[out] == need[out]) {
+                    have--;
+                }
+                window[out]--;
+
+                left++;
             }
         }
-        return bestLen == Integer.MAX_VALUE ? "" : s.substring(bestL, bestL + bestLen);
+
+        if (bestLen == Integer.MAX_VALUE) {
+            return "";
+        }
+
+        return s.substring(bestStart, bestStart + bestLen);
     }
 }
 
 // @@ 26
 class Solution {
     public boolean isValid(String s) {
-        Map<Character, Character> match = Map.of(')', '(', ']', '[', '}', '{');
+
+        Map<Character, Character> match = new HashMap<>();
+        match.put(')', '(');
+        match.put(']', '[');
+        match.put('}', '{');
+
         Deque<Character> stack = new ArrayDeque<>();
+
         for (char ch : s.toCharArray()) {
+
             if (match.containsKey(ch)) {
-                if (stack.isEmpty() || stack.peek() != match.get(ch)) return false;
-                stack.pop();
-            } else {
+
+                if (stack.isEmpty()) {
+                    return false;
+                }
+
+                char top = stack.pop();
+
+                if (top != match.get(ch)) {
+                    return false;
+                }
+            }
+
+            else {
                 stack.push(ch);
             }
         }
+
         return stack.isEmpty();
     }
 }
 
 // @@ 27
 class MinStack {
-    private final Deque<int[]> st = new ArrayDeque<>();  // {value, min so far}
+    private Deque<int[]> stack = new ArrayDeque<>();  // {value, min so far}
 
-    public MinStack() {}
-
-    public void push(int val) {
-        int low = st.isEmpty() ? val : Math.min(val, st.peek()[1]);
-        st.push(new int[]{val, low});
+    public MinStack() {
     }
 
-    public void pop() { st.pop(); }
+    public void push(int val) {
 
-    public int top() { return st.peek()[0]; }
+        int low = val;
 
-    public int getMin() { return st.peek()[1]; }
+        if (!stack.isEmpty()) {
+            low = Math.min(val, stack.peek()[1]);
+        }
+
+        stack.push(new int[]{val, low});
+    }
+
+    public void pop() {
+        stack.pop();
+    }
+
+    public int top() {
+        return stack.peek()[0];
+    }
+
+    public int getMin() {
+        return stack.peek()[1];
+    }
 }
 
 // @@ 28
 class Solution {
     public int evalRPN(String[] tokens) {
-        Deque<Integer> st = new ArrayDeque<>();
-        for (String tok : tokens) {
-            switch (tok) {
-                case "+" -> st.push(st.pop() + st.pop());
-                case "*" -> st.push(st.pop() * st.pop());
-                case "-" -> { int b = st.pop(), a = st.pop(); st.push(a - b); }
-                case "/" -> { int b = st.pop(), a = st.pop(); st.push(a / b); }  // truncates toward zero
-                default -> st.push(Integer.parseInt(tok));
+
+        Deque<Integer> stack = new ArrayDeque<>();
+
+        for (String token : tokens) {
+
+            if (token.equals("+") || token.equals("-") || token.equals("*") || token.equals("/")) {
+
+                int b = stack.pop();
+                int a = stack.pop();
+
+                if (token.equals("+")) {
+                    stack.push(a + b);
+                }
+                else if (token.equals("-")) {
+                    stack.push(a - b);
+                }
+                else if (token.equals("*")) {
+                    stack.push(a * b);
+                }
+                else {
+                    stack.push(a / b);  // Java division truncates toward zero
+                }
+            }
+
+            else {
+                stack.push(Integer.parseInt(token));
             }
         }
-        return st.pop();
+
+        return stack.pop();
     }
 }
 
 // @@ 29
 class Solution {
-    private final List<String> res = new ArrayList<>();
+    private List<String> ans = new ArrayList<>();
 
     public List<String> generateParenthesis(int n) {
-        bt(new StringBuilder(), 0, 0, n);
-        return res;
+
+        backtrack(new StringBuilder(), 0, 0, n);
+
+        return ans;
     }
 
-    private void bt(StringBuilder cur, int open, int closed, int n) {
-        if (cur.length() == 2 * n) {
-            res.add(cur.toString());
+    private void backtrack(StringBuilder curr, int opened, int closed, int n) {
+
+        if (curr.length() == 2 * n) {
+            ans.add(curr.toString());
             return;
         }
-        if (open < n) {
-            cur.append('(');
-            bt(cur, open + 1, closed, n);
-            cur.deleteCharAt(cur.length() - 1);
+
+        if (opened < n) {
+            curr.append('(');
+            backtrack(curr, opened + 1, closed, n);
+            curr.deleteCharAt(curr.length() - 1);
         }
-        if (closed < open) {
-            cur.append(')');
-            bt(cur, open, closed + 1, n);
-            cur.deleteCharAt(cur.length() - 1);
+
+        if (closed < opened) {
+            curr.append(')');
+            backtrack(curr, opened, closed + 1, n);
+            curr.deleteCharAt(curr.length() - 1);
         }
     }
 }
@@ -187,16 +329,21 @@ class Solution {
 // @@ 30
 class Solution {
     public int[] dailyTemperatures(int[] temperatures) {
+
         int n = temperatures.length;
         int[] ans = new int[n];
-        Deque<Integer> st = new ArrayDeque<>();  // indices still waiting, temps decreasing
+        Deque<Integer> stack = new ArrayDeque<>();  // indices still waiting, temps decreasing
+
         for (int i = 0; i < n; i++) {
-            while (!st.isEmpty() && temperatures[st.peek()] < temperatures[i]) {
-                int j = st.pop();
+
+            while (!stack.isEmpty() && temperatures[stack.peek()] < temperatures[i]) {
+                int j = stack.pop();
                 ans[j] = i - j;
             }
-            st.push(i);
+
+            stack.push(i);
         }
+
         return ans;
     }
 }
@@ -204,34 +351,67 @@ class Solution {
 // @@ 31
 class Solution {
     public int carFleet(int target, int[] position, int[] speed) {
+
         int n = position.length;
-        Integer[] order = new Integer[n];
-        for (int i = 0; i < n; i++) order[i] = i;
-        Arrays.sort(order, (a, b) -> position[b] - position[a]);  // closest to target first
-        Deque<Double> st = new ArrayDeque<>();                   // arrival time of each fleet
-        for (int i : order) {
-            double t = (double) (target - position[i]) / speed[i];
-            if (st.isEmpty() || t > st.peek()) st.push(t);
+
+        int[][] cars = new int[n][2];
+        for (int i = 0; i < n; i++) {
+            cars[i][0] = position[i];
+            cars[i][1] = speed[i];
         }
-        return st.size();
+
+        // closest to target first
+        Arrays.sort(cars, (a, b) -> b[0] - a[0]);
+
+        Deque<Double> stack = new ArrayDeque<>();  // arrival time of each fleet
+
+        for (int[] car : cars) {
+
+            double time = (double) (target - car[0]) / car[1];
+
+            if (stack.isEmpty() || time > stack.peek()) {
+                stack.push(time);
+            }
+        }
+
+        return stack.size();
     }
 }
 
 // @@ 32
 class Solution {
     public int largestRectangleArea(int[] heights) {
-        Deque<int[]> st = new ArrayDeque<>();  // {start index, height}, heights increasing
-        int best = 0, n = heights.length;
+
+        int n = heights.length;
+        Deque<int[]> stack = new ArrayDeque<>();  // {start index, height}, heights increasing
+        int best = 0;
+
         for (int i = 0; i < n; i++) {
+
             int start = i;
-            while (!st.isEmpty() && st.peek()[1] > heights[i]) {
-                int[] top = st.pop();
-                best = Math.max(best, top[1] * (i - top[0]));
-                start = top[0];
+
+            while (!stack.isEmpty() && stack.peek()[1] > heights[i]) {
+
+                int[] top = stack.pop();
+                int idx = top[0];
+                int height = top[1];
+
+                best = Math.max(best, height * (i - idx));
+                start = idx;
             }
-            st.push(new int[]{start, heights[i]});
+
+            stack.push(new int[]{start, heights[i]});
         }
-        for (int[] e : st) best = Math.max(best, e[1] * (n - e[0]));
+
+        while (!stack.isEmpty()) {
+
+            int[] top = stack.pop();
+            int idx = top[0];
+            int height = top[1];
+
+            best = Math.max(best, height * (n - idx));
+        }
+
         return best;
     }
 }

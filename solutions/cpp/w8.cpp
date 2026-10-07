@@ -4,10 +4,17 @@
 class Solution {
 public:
     int uniquePaths(int m, int n) {
-        vector<int> row(n, 1);  // first row: one path to each cell
-        for (int r = 1; r < m; r++)
-            for (int c = 1; c < n; c++)
-                row[c] += row[c - 1];  // from above (old row[c]) + from the left
+
+        // first row: one path to each cell
+        vector<int> row(n, 1);
+
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                // row[j] still holds the value from above; add the one from the left
+                row[j] += row[j - 1];
+            }
+        }
+
         return row[n - 1];
     }
 };
@@ -16,12 +23,26 @@ public:
 class Solution {
 public:
     int longestCommonSubsequence(string text1, string text2) {
-        int m = text1.size(), n = text2.size();
-        vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));  // row/col 0 = empty prefix
-        for (int i = 1; i <= m; i++)
-            for (int j = 1; j <= n; j++)
-                dp[i][j] = text1[i - 1] == text2[j - 1] ? dp[i - 1][j - 1] + 1
-                                                        : max(dp[i - 1][j], dp[i][j - 1]);
+
+        int m = text1.size();
+        int n = text2.size();
+
+        // row 0 and column 0 stand for an empty prefix
+        vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));
+
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+
+                if (text1[i - 1] == text2[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                }
+
+                else {
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+
         return dp[m][n];
     }
 };
@@ -30,13 +51,22 @@ public:
 class Solution {
 public:
     int maxProfit(vector<int>& prices) {
-        int hold = INT_MIN, sold = 0, rest = 0;  // own a stock / sold today / free to buy
-        for (int p : prices) {
-            int prevHold = hold, prevSold = sold, prevRest = rest;
-            hold = max(prevHold, prevRest - p);
-            sold = prevHold + p;
+
+        int hold = INT_MIN;  // own a stock
+        int sold = 0;        // sold today, must cool down tomorrow
+        int rest = 0;        // no stock, free to buy
+
+        for (int price : prices) {
+
+            int prevHold = hold;
+            int prevSold = sold;
+            int prevRest = rest;
+
+            hold = max(prevHold, prevRest - price);
+            sold = prevHold + price;
             rest = max(prevRest, prevSold);
         }
+
         return max(sold, rest);
     }
 };
@@ -45,11 +75,18 @@ public:
 class Solution {
 public:
     int change(int amount, vector<int>& coins) {
-        vector<unsigned long long> dp(amount + 1, 0);  // dp[a] = combinations making a
+
+        // dp[a] = number of combinations making a
+        vector<unsigned long long> dp(amount + 1, 0);
         dp[0] = 1;
-        for (int c : coins)                  // coins outer: each combination counted once
-            for (int a = c; a <= amount; a++)  // upwards: coin can be reused
-                dp[a] += dp[a - c];
+
+        // coins in the outer loop: each combination is counted once
+        for (int coin : coins) {
+            for (int a = coin; a <= amount; a++) {
+                dp[a] += dp[a - coin];
+            }
+        }
+
         return (int)dp[amount];
     }
 };
@@ -58,14 +95,32 @@ public:
 class Solution {
 public:
     int findTargetSumWays(vector<int>& nums, int target) {
-        int total = accumulate(nums.begin(), nums.end(), 0);
-        if (abs(target) > total || (total + target) % 2) return 0;
-        int goal = (total + target) / 2;  // sum of the numbers that get '+'
+
+        int total = 0;
+        for (int num : nums) {
+            total += num;
+        }
+
+        if (abs(target) > total) {
+            return 0;
+        }
+
+        if ((total + target) % 2 != 0) {
+            return 0;
+        }
+
+        // sum of the numbers that get '+'
+        int goal = (total + target) / 2;
+
         vector<int> dp(goal + 1, 0);
         dp[0] = 1;
-        for (int x : nums)
-            for (int t = goal; t >= x; t--)  // 0/1 knapsack counting
-                dp[t] += dp[t - x];
+
+        for (int num : nums) {
+            for (int sum = goal; sum >= num; sum--) {
+                dp[sum] += dp[sum - num];
+            }
+        }
+
         return dp[goal];
     }
 };
@@ -74,15 +129,30 @@ public:
 class Solution {
 public:
     bool isInterleave(string s1, string s2, string s3) {
-        int m = s1.size(), n = s2.size();
-        if (m + n != (int)s3.size()) return false;
+
+        int m = s1.size();
+        int n = s2.size();
+
+        if (m + n != (int)s3.size()) {
+            return false;
+        }
+
         vector<vector<bool>> dp(m + 1, vector<bool>(n + 1, false));
         dp[0][0] = true;
-        for (int i = 0; i <= m; i++)
+
+        for (int i = 0; i <= m; i++) {
             for (int j = 0; j <= n; j++) {
-                if (i > 0 && dp[i - 1][j] && s1[i - 1] == s3[i + j - 1]) dp[i][j] = true;
-                if (j > 0 && dp[i][j - 1] && s2[j - 1] == s3[i + j - 1]) dp[i][j] = true;
+
+                if (i > 0 && dp[i - 1][j] && s1[i - 1] == s3[i + j - 1]) {
+                    dp[i][j] = true;
+                }
+
+                if (j > 0 && dp[i][j - 1] && s2[j - 1] == s3[i + j - 1]) {
+                    dp[i][j] = true;
+                }
             }
+        }
+
         return dp[m][n];
     }
 };
@@ -91,41 +161,94 @@ public:
 class Solution {
 public:
     int minDistance(string word1, string word2) {
-        int m = word1.size(), n = word2.size();
-        vector<vector<int>> dp(m + 1, vector<int>(n + 1));
-        for (int i = 0; i <= m; i++) dp[i][0] = i;  // delete everything
-        for (int j = 0; j <= n; j++) dp[0][j] = j;  // insert everything
-        for (int i = 1; i <= m; i++)
+
+        int m = word1.size();
+        int n = word2.size();
+
+        vector<vector<int>> dp(m + 1, vector<int>(n + 1, 0));
+
+        // delete everything
+        for (int i = 0; i <= m; i++) {
+            dp[i][0] = i;
+        }
+
+        // insert everything
+        for (int j = 0; j <= n; j++) {
+            dp[0][j] = j;
+        }
+
+        for (int i = 1; i <= m; i++) {
             for (int j = 1; j <= n; j++) {
-                if (word1[i - 1] == word2[j - 1]) dp[i][j] = dp[i - 1][j - 1];
-                else dp[i][j] = 1 + min({dp[i][j - 1],       // insert
-                                         dp[i - 1][j],       // delete
-                                         dp[i - 1][j - 1]}); // replace
+
+                if (word1[i - 1] == word2[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1];
+                }
+
+                else {
+                    int insertCost = dp[i][j - 1];
+                    int deleteCost = dp[i - 1][j];
+                    int replaceCost = dp[i - 1][j - 1];
+
+                    dp[i][j] = 1 + min(insertCost, min(deleteCost, replaceCost));
+                }
             }
+        }
+
         return dp[m][n];
     }
 };
 
 // @@ 130
 class Solution {
-    vector<vector<int>> memo;  // 0 = not computed yet
-    int dfs(vector<vector<int>>& m, int r, int c) {
-        if (memo[r][c]) return memo[r][c];
-        int best = 1, dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};
-        for (int d = 0; d < 4; d++) {
-            int nr = r + dr[d], nc = c + dc[d];
-            if (nr >= 0 && nc >= 0 && nr < (int)m.size() && nc < (int)m[0].size() && m[nr][nc] > m[r][c])
-                best = max(best, 1 + dfs(m, nr, nc));
-        }
-        return memo[r][c] = best;
-    }
 public:
     int longestIncreasingPath(vector<vector<int>>& matrix) {
-        memo.assign(matrix.size(), vector<int>(matrix[0].size(), 0));
+
+        int rows = matrix.size();
+        int cols = matrix[0].size();
+
+        // 0 = not computed yet
+        vector<vector<int>> memo(rows, vector<int>(cols, 0));
+
         int best = 0;
-        for (int r = 0; r < (int)matrix.size(); r++)
-            for (int c = 0; c < (int)matrix[0].size(); c++)
-                best = max(best, dfs(matrix, r, c));
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                best = max(best, dfs(matrix, memo, row, col));
+            }
+        }
+
+        return best;
+    }
+
+private:
+    int dfs(vector<vector<int>>& matrix, vector<vector<int>>& memo, int row, int col) {
+
+        if (memo[row][col] != 0) {
+            return memo[row][col];
+        }
+
+        int rows = matrix.size();
+        int cols = matrix[0].size();
+
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+        int best = 1;
+
+        for (int d = 0; d < 4; d++) {
+
+            int nextRow = row + dirs[d][0];
+            int nextCol = col + dirs[d][1];
+
+            if (nextRow < 0 || nextRow >= rows || nextCol < 0 || nextCol >= cols) {
+                continue;
+            }
+
+            if (matrix[nextRow][nextCol] > matrix[row][col]) {
+                best = max(best, 1 + dfs(matrix, memo, nextRow, nextCol));
+            }
+        }
+
+        memo[row][col] = best;
         return best;
     }
 };
@@ -134,15 +257,31 @@ public:
 class Solution {
 public:
     int numDistinct(string s, string t) {
-        int m = s.size(), n = t.size();
-        // dp[i][j] = ways s[i:] contains t[j:]; unsigned so huge intermediate counts can't overflow UB
+
+        int m = s.size();
+        int n = t.size();
+
+        // dp[i][j] = ways s[i:] contains t[j:]; unsigned so huge counts can't overflow (UB)
         vector<vector<unsigned long long>> dp(m + 1, vector<unsigned long long>(n + 1, 0));
-        for (int i = 0; i <= m; i++) dp[i][n] = 1;  // empty t: one way
-        for (int i = m - 1; i >= 0; i--)
+
+        // empty t: one way
+        for (int i = 0; i <= m; i++) {
+            dp[i][n] = 1;
+        }
+
+        for (int i = m - 1; i >= 0; i--) {
             for (int j = n - 1; j >= 0; j--) {
-                dp[i][j] = dp[i + 1][j];                          // skip s[i]
-                if (s[i] == t[j]) dp[i][j] += dp[i + 1][j + 1];  // use s[i]
+
+                // skip s[i]
+                dp[i][j] = dp[i + 1][j];
+
+                // use s[i]
+                if (s[i] == t[j]) {
+                    dp[i][j] += dp[i + 1][j + 1];
+                }
             }
+        }
+
         return (int)dp[0][0];
     }
 };
@@ -151,11 +290,18 @@ public:
 class Solution {
 public:
     int maxSubArray(vector<int>& nums) {
-        int cur = nums[0], best = nums[0];
+
+        int curr = nums[0];
+        int best = nums[0];
+
         for (int i = 1; i < (int)nums.size(); i++) {
-            cur = max(nums[i], cur + nums[i]);  // restart when the running sum hurts
-            best = max(best, cur);
+
+            // restart at nums[i] when the running sum only drags it down
+            curr = max(nums[i], curr + nums[i]);
+
+            best = max(best, curr);
         }
+
         return best;
     }
 };
@@ -164,11 +310,18 @@ public:
 class Solution {
 public:
     bool canJump(vector<int>& nums) {
+
         int reach = 0;
+
         for (int i = 0; i < (int)nums.size(); i++) {
-            if (i > reach) return false;  // can't even get here
+
+            if (i > reach) {
+                return false;
+            }
+
             reach = max(reach, i + nums[i]);
         }
+
         return true;
     }
 };
@@ -177,14 +330,22 @@ public:
 class Solution {
 public:
     int jump(vector<int>& nums) {
-        int jumps = 0, end = 0, farthest = 0;
+
+        int jumps = 0;
+        int end = 0;
+        int farthest = 0;
+
         for (int i = 0; i < (int)nums.size() - 1; i++) {
+
             farthest = max(farthest, i + nums[i]);
-            if (i == end) {  // current window used up: one more jump
+
+            // current window used up: one more jump
+            if (i == end) {
                 jumps++;
                 end = farthest;
             }
         }
+
         return jumps;
     }
 };
@@ -193,16 +354,28 @@ public:
 class Solution {
 public:
     int canCompleteCircuit(vector<int>& gas, vector<int>& cost) {
-        int total = 0, tank = 0, start = 0;
+
+        int total = 0;
+        int tank = 0;
+        int start = 0;
+
         for (int i = 0; i < (int)gas.size(); i++) {
+
             total += gas[i] - cost[i];
             tank += gas[i] - cost[i];
-            if (tank < 0) {  // no start in [start, i] works
+
+            // no station from start to i can be the answer
+            if (tank < 0) {
                 start = i + 1;
                 tank = 0;
             }
         }
-        return total < 0 ? -1 : start;
+
+        if (total < 0) {
+            return -1;
+        }
+
+        return start;
     }
 };
 
@@ -210,18 +383,41 @@ public:
 class Solution {
 public:
     bool isNStraightHand(vector<int>& hand, int groupSize) {
-        if (hand.size() % groupSize) return false;
-        map<int, int> count;  // sorted by card value
-        for (int h : hand) count[h]++;
-        for (auto& [start, n] : count) {
-            if (n == 0) continue;
-            int need = n;  // the smallest card must start `need` groups
+
+        if (hand.size() % groupSize != 0) {
+            return false;
+        }
+
+        // map keeps card values sorted
+        map<int, int> count;
+        for (int card : hand) {
+            count[card]++;
+        }
+
+        for (auto& entry : count) {
+
+            int start = entry.first;
+            int need = entry.second;
+
+            if (need == 0) {
+                continue;
+            }
+
+            // the smallest card must start `need` groups
             for (int card = start; card < start + groupSize; card++) {
-                auto it = count.find(card);
-                if (it == count.end() || it->second < need) return false;
-                it->second -= need;
+
+                if (count.find(card) == count.end()) {
+                    return false;
+                }
+
+                if (count[card] < need) {
+                    return false;
+                }
+
+                count[card] -= need;
             }
         }
+
         return true;
     }
 };
@@ -230,17 +426,27 @@ public:
 class Solution {
 public:
     vector<int> partitionLabels(string s) {
+
         int last[26];
-        for (int i = 0; i < (int)s.size(); i++) last[s[i] - 'a'] = i;
-        vector<int> sizes;
-        int start = 0, end = 0;
         for (int i = 0; i < (int)s.size(); i++) {
+            last[s[i] - 'a'] = i;
+        }
+
+        vector<int> sizes;
+        int start = 0;
+        int end = 0;
+
+        for (int i = 0; i < (int)s.size(); i++) {
+
             end = max(end, last[s[i] - 'a']);
-            if (i == end) {  // everything inside has finished appearing
+
+            // every letter inside has finished appearing
+            if (i == end) {
                 sizes.push_back(end - start + 1);
                 start = i + 1;
             }
         }
+
         return sizes;
     }
 };

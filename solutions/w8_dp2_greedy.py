@@ -6,7 +6,7 @@ from _harness import *
      tests=[(lambda f: f(3, 7), 28), (lambda f: f(1, 1), 1), (lambda f: f(3, 2), 3)],
      algo=['paths(r, c) = paths(r−1, c) + paths(r, c−1): you arrive from above or from the left.',
            'First row and first column have exactly 1 path.',
-           'Keep one row: row[c] += row[c−1] (row[c] already holds the value from above).'],
+           'Keep one row: row[j] += row[j−1] (row[j] already holds the value from above).'],
      dry=['row 0: [1, 1, 1]',
           'row 1: [1, 1+1=2, 2+1=3]',
           'row 2: [1, 1+2=3, 3+3=6] ⇒ 6'])
@@ -45,13 +45,13 @@ def longestCommonSubsequence(text1, text2):
      tests=[(lambda f: f([1]), 0), (lambda f: f([2, 1]), 0)],
      algo=['Three states at the end of each day:',
            'hold = own a stock; sold = sold today (must cool down tomorrow); rest = no stock, free to buy.',
-           'hold = max(hold, rest − p); sold = hold + p; rest = max(rest, sold) — all from YESTERDAY’s values.',
+           'hold = max(hold, rest − price); sold = hold + price; rest = max(rest, sold) — all from YESTERDAY’s values (save prevHold, prevSold, prevRest first).',
            'Answer = max(sold, rest).'],
-     dry=['p=1: hold=-1, sold=-inf, rest=0',
-          'p=2: hold=-1, sold=1, rest=0',
-          'p=3: hold=-1, sold=2, rest=1',
-          'p=0: hold=max(-1, 1-0)=1, sold=-1, rest=2',
-          'p=2: hold=1, sold=1+2=3, rest=2 ⇒ 3 (buy 1, sell 2, cool, buy 0, sell 2)'])
+     dry=['price 1: hold=-1, sold=-inf, rest=0',
+          'price 2: hold=-1, sold=1, rest=0',
+          'price 3: hold=-1, sold=2, rest=1',
+          'price 0: hold=max(-1, 1-0)=1, sold=-1, rest=2',
+          'price 2: hold=1, sold=1+2=3, rest=2 ⇒ 3 (buy 1, sell 2, cool, buy 0, sell 2)'])
 def maxProfitCooldown(prices):
     hold, sold, rest = float('-inf'), 0, 0
     for p in prices:
@@ -63,7 +63,7 @@ def maxProfitCooldown(prices):
      tests=[(lambda f: f(3, [2]), 0), (lambda f: f(10, [10]), 1), (lambda f: f(0, [7]), 1)],
      algo=['dp[a] = number of combinations making amount a; dp[0] = 1.',
            'Coins in the OUTER loop: each combination is counted once, in coin order.',
-           'For each coin c, for a from c up to amount: dp[a] += dp[a − c] (upwards = coin reusable).'],
+           'For each coin, for a from coin up to amount: dp[a] += dp[a − coin] (upwards = coin reusable).'],
      dry=['start dp = [1, 0, 0, 0, 0, 0]',
           'coin 1 → [1, 1, 1, 1, 1, 1]',
           'coin 2 → [1, 1, 2, 2, 3, 3]',
@@ -80,7 +80,7 @@ def change(amount, coins):
      tests=[(lambda f: f([1], 1), 1), (lambda f: f([0, 0, 1], 1), 4), (lambda f: f([1], 2), 0)],
      algo=["Split into + numbers (sum P) and − numbers (sum N): P − N = target, P + N = total → P = (total + target) / 2.",
            'If |target| > total or total + target is odd → 0.',
-           'Count subsets summing to P (0/1 knapsack counting, loop t downwards).'],
+           'Count subsets summing to P = goal (0/1 knapsack counting, loop sum downwards).'],
      dry=['total 5 → P = (5 + 3) / 2 = 4',
           'dp over five 1s: [1,1,0,0,0] → [1,2,1,0,0] → [1,3,3,1,0] → [1,4,6,4,1]',
           'fifth 1: dp[4] = 1 + 4 = 5 ⇒ 5'])
@@ -153,7 +153,7 @@ def minDistance(word1, word2):
 
 @sol(130, ex='matrix = [[9,9,4],[6,6,8],[2,1,1]]', run=lambda f: f([[9, 9, 4], [6, 6, 8], [2, 1, 1]]), expect=4,
      tests=[(lambda f: f([[3, 4, 5], [3, 2, 6], [2, 2, 1]]), 4), (lambda f: f([[1]]), 1)],
-     algo=['dfs(r, c) = longest strictly increasing path starting at (r, c).',
+     algo=['dfs(row, col) = longest strictly increasing path starting at (row, col).',
            '= 1 + max dfs(neighbour) over neighbours with a larger value (or 1 if none).',
            'Memoise each cell’s answer in a table — strictly increasing paths can never loop, so no visited set is needed.',
            'Answer = max over all cells.'],
@@ -204,13 +204,13 @@ def numDistinct(s, t):
 
 @sol(133, ex='nums = [-2, 1, -3, 4, -1, 2, 1, -5, 4]', run=lambda f: f([-2, 1, -3, 4, -1, 2, 1, -5, 4]), expect=6,
      tests=[(lambda f: f([1]), 1), (lambda f: f([-3, -1, -2]), -1), (lambda f: f([5, 4, -1, 7, 8]), 23)],
-     algo=["Kadane: cur = best sum of a subarray ending here.",
-           'cur = max(x, cur + x) — restart at x when the running sum would only drag it down.',
-           'best = max(best, cur). Start both at nums[0] (handles all-negative arrays).'],
-     dry=['-2 → cur -2, best -2',
-          '1 → restart: cur 1, best 1',
-          '-3 → cur -2',
-          '4 → restart: cur 4, best 4',
+     algo=["Kadane: curr = best sum of a subarray ending here.",
+           'curr = max(x, curr + x) — restart at x when the running sum would only drag it down.',
+           'best = max(best, curr). Start both at nums[0] (handles all-negative arrays).'],
+     dry=['-2 → curr -2, best -2',
+          '1 → restart: curr 1, best 1',
+          '-3 → curr -2',
+          '4 → restart: curr 4, best 4',
           '-1 → 3;  2 → 5;  1 → 6 ★',
           '-5 → 1;  4 → 5 ⇒ 6 ([4, -1, 2, 1])'])
 def maxSubArray(nums):
@@ -283,13 +283,13 @@ def canCompleteCircuit(gas, cost):
      tests=[(lambda f: f([1, 2, 3, 4, 5], 4), False), (lambda f: f([1, 1, 2, 2, 3, 3], 3), True)],
      algo=['Card count must be a multiple of groupSize.',
            'count = how many of each card value (sorted map). Visit values in increasing order.',
-           'The smallest remaining value must START its groups: with n copies left, values start..start+size−1 each need n.',
-           'Any shortfall → False; otherwise subtract n from each.'],
+           'The smallest remaining value must START its groups: with need copies left, values start..start+size−1 each need that many.',
+           'Any shortfall → False; otherwise subtract need from each.'],
      dry=['counts 1:1, 2:2, 3:2, 4:1, 6:1, 7:1, 8:1',
-          'start 1 (n=1): take 1, 2, 3 → 2:1, 3:1',
-          'start 2 (n=1): take 2, 3, 4',
+          'start 1 (need 1): take 1, 2, 3 → 2:1, 3:1',
+          'start 2 (need 1): take 2, 3, 4',
           '3, 4 now 0 → skip',
-          'start 6 (n=1): take 6, 7, 8 ⇒ True'])
+          'start 6 (need 1): take 6, 7, 8 ⇒ True'])
 def isNStraightHand(hand, groupSize):
     if len(hand) % groupSize:
         return False

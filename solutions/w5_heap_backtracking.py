@@ -89,10 +89,10 @@ def findKthLargest(nums, k):
 
 @sol(77, ex='tasks = ["A","A","A","B","B","B"], n = 2', run=lambda f: f(list('AAABBB'), 2), expect=8,
      tests=[(lambda f: f(list('AAABBB'), 0), 6), (lambda f: f(list('AAAAAABCDEFG'), 2), 16)],
-     algo=['max_f = highest task frequency; n_max = how many tasks have that frequency.',
-           'The most frequent task forces (max_f − 1) frames of length n + 1, plus a last row of n_max tasks.',
+     algo=['maxFreq = highest task frequency; maxCount = how many tasks have that frequency.',
+           'The most frequent task forces (maxFreq − 1) frames of length n + 1, plus a last row of maxCount tasks.',
            'If there are more tasks than that, no idle time is needed → answer = max(len(tasks), frames).'],
-     dry=['counts: A=3, B=3 → max_f=3, n_max=2',
+     dry=['counts: A=3, B=3 → maxFreq=3, maxCount=2',
           'frames = (3−1)·(2+1) + 2 = 8 → A B _ A B _ A B',
           'max(6, 8) ⇒ 8'])
 def leastInterval(tasks, n):
@@ -184,7 +184,7 @@ class MedianFinder:
 @sol(81, ex='nums = [1, 2, 3]', run=lambda f: f([1, 2, 3]),
      expect=[[], [1], [1, 2], [1, 2, 3], [1, 3], [2], [2, 3], [3]], norm='deep',
      tests=[(lambda f: f([0]), [[], [0]])],
-     algo=['bt(start): every node of the recursion tree is a subset → record a copy of path.',
+     algo=['backtrack(start): every node of the recursion tree is a subset → record a copy of path.',
            'For i from start: choose nums[i], recurse with i + 1, un-choose.',
            'Using start means each subset is built in index order once.'],
      dry=['[] → [1] → [1,2] → [1,2,3]',
@@ -208,7 +208,7 @@ def subsets(nums):
 @sol(82, ex='candidates = [2, 3, 6, 7], target = 7', run=lambda f: f([2, 3, 6, 7], 7), expect=[[2, 2, 3], [7]], norm='deep',
      tests=[(lambda f: f([2, 3, 5], 8), [[2, 2, 2, 2], [2, 3, 3], [3, 5]]), (lambda f: f([2], 1), [])],
      algo=['Sort candidates so we can stop early.',
-           'bt(start, remaining): remaining == 0 → record path.',
+           'backtrack(start, remaining): remaining == 0 → record path.',
            'For i from start: if candidates[i] > remaining break; choose it and recurse with i (reuse allowed).'],
      dry=['[2] rem 5 → [2,2] rem 3 → [2,2,2] rem 1 → 2 > 1 break',
           '[2,2,3] rem 0 ✓',
@@ -328,7 +328,7 @@ def exist(board, word):
 
 @sol(86, ex='s = "aab"', run=lambda f: f('aab'), expect=[['a', 'a', 'b'], ['aa', 'b']], norm='sorted',
      tests=[(lambda f: f('a'), [['a']])],
-     algo=['bt(start): start == len(s) → record path.',
+     algo=['backtrack(start): start == len(s) → record path.',
            'Try every end from start: if s[start:end+1] is a palindrome, choose it and recurse from end + 1.'],
      dry=["start 0: 'a' ✓ → start 1: 'a' ✓ → start 2: 'b' ✓ → record [a,a,b]",
           "start 1: 'ab' ✗",

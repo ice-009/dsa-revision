@@ -4,27 +4,51 @@
 class Solution {
 public:
     int numIslands(vector<vector<char>>& grid) {
-        int rows = grid.size(), cols = grid[0].size(), count = 0;
-        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};
+
+        int rows = grid.size();
+        int cols = grid[0].size();
+        int count = 0;
+
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
         for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                if (grid[r][c] != '1') continue;
+
+                if (grid[r][c] != '1') {
+                    continue;
+                }
+
                 count++;
-                grid[r][c] = '0';  // sink the whole island with an explicit stack
-                vector<pair<int, int>> st{{r, c}};
-                while (!st.empty()) {
-                    auto [y, x] = st.back();
-                    st.pop_back();
+
+                // sink the whole island with an explicit stack
+                stack<pair<int, int>> cells;
+                cells.push({r, c});
+                grid[r][c] = '0';
+
+                while (!cells.empty()) {
+
+                    int row = cells.top().first;
+                    int col = cells.top().second;
+                    cells.pop();
+
                     for (int d = 0; d < 4; d++) {
-                        int ny = y + dr[d], nx = x + dc[d];
-                        if (ny >= 0 && nx >= 0 && ny < rows && nx < cols && grid[ny][nx] == '1') {
-                            grid[ny][nx] = '0';
-                            st.push_back({ny, nx});
+
+                        int nr = row + dirs[d][0];
+                        int nc = col + dirs[d][1];
+
+                        if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) {
+                            continue;
+                        }
+
+                        if (grid[nr][nc] == '1') {
+                            grid[nr][nc] = '0';
+                            cells.push({nr, nc});
                         }
                     }
                 }
             }
         }
+
         return count;
     }
 };
@@ -32,81 +56,185 @@ public:
 // @@ 90
 class Solution {
     unordered_map<Node*, Node*> clones;  // original -> copy
+
 public:
     Node* cloneGraph(Node* node) {
-        if (!node) return nullptr;
-        if (clones.count(node)) return clones[node];
+
+        if (node == nullptr) {
+            return nullptr;
+        }
+
+        if (clones.count(node)) {
+            return clones[node];
+        }
+
         Node* copy = new Node(node->val);
         clones[node] = copy;  // store before recursing: handles cycles
-        for (Node* nb : node->neighbors) copy->neighbors.push_back(cloneGraph(nb));
+
+        for (Node* neighbor : node->neighbors) {
+            copy->neighbors.push_back(cloneGraph(neighbor));
+        }
+
         return copy;
     }
 };
 
 // @@ 91
 class Solution {
-    int area(vector<vector<int>>& grid, int r, int c) {
-        if (r < 0 || c < 0 || r >= (int)grid.size() || c >= (int)grid[0].size() || grid[r][c] != 1) return 0;
-        grid[r][c] = 0;  // sink
-        return 1 + area(grid, r + 1, c) + area(grid, r - 1, c) + area(grid, r, c + 1) + area(grid, r, c - 1);
-    }
 public:
     int maxAreaOfIsland(vector<vector<int>>& grid) {
+
+        int rows = grid.size();
+        int cols = grid[0].size();
         int best = 0;
-        for (int r = 0; r < (int)grid.size(); r++)
-            for (int c = 0; c < (int)grid[0].size(); c++)
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
                 best = max(best, area(grid, r, c));
+            }
+        }
+
         return best;
+    }
+
+private:
+    int area(vector<vector<int>>& grid, int r, int c) {
+
+        if (r < 0 || c < 0 || r >= (int)grid.size() || c >= (int)grid[0].size()) {
+            return 0;
+        }
+
+        if (grid[r][c] != 1) {
+            return 0;
+        }
+
+        grid[r][c] = 0;  // sink
+
+        int total = 1;
+        total += area(grid, r + 1, c);
+        total += area(grid, r - 1, c);
+        total += area(grid, r, c + 1);
+        total += area(grid, r, c - 1);
+
+        return total;
     }
 };
 
 // @@ 92
 class Solution {
-    int rows, cols;
-    void climb(vector<vector<int>>& h, vector<vector<bool>>& seen, int r, int c) {
-        seen[r][c] = true;
-        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};
-        for (int d = 0; d < 4; d++) {
-            int nr = r + dr[d], nc = c + dc[d];
-            if (nr >= 0 && nc >= 0 && nr < rows && nc < cols && !seen[nr][nc] && h[nr][nc] >= h[r][c])
-                climb(h, seen, nr, nc);  // water could flow from (nr,nc) down to (r,c)
-        }
-    }
 public:
     vector<vector<int>> pacificAtlantic(vector<vector<int>>& heights) {
-        rows = heights.size();
-        cols = heights[0].size();
-        vector<vector<bool>> pac(rows, vector<bool>(cols)), atl(rows, vector<bool>(cols));
+
+        int rows = heights.size();
+        int cols = heights[0].size();
+
+        vector<vector<bool>> pacific(rows, vector<bool>(cols, false));
+        vector<vector<bool>> atlantic(rows, vector<bool>(cols, false));
+
+        // top row + bottom row
         for (int c = 0; c < cols; c++) {
-            if (!pac[0][c]) climb(heights, pac, 0, c);
-            if (!atl[rows - 1][c]) climb(heights, atl, rows - 1, c);
+            dfs(heights, pacific, 0, c);
+            dfs(heights, atlantic, rows - 1, c);
         }
+
+        // left column + right column
         for (int r = 0; r < rows; r++) {
-            if (!pac[r][0]) climb(heights, pac, r, 0);
-            if (!atl[r][cols - 1]) climb(heights, atl, r, cols - 1);
+            dfs(heights, pacific, r, 0);
+            dfs(heights, atlantic, r, cols - 1);
         }
-        vector<vector<int>> res;
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
-                if (pac[r][c] && atl[r][c]) res.push_back({r, c});
-        return res;
+
+        vector<vector<int>> result;
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if (pacific[r][c] && atlantic[r][c]) {
+                    result.push_back({r, c});
+                }
+            }
+        }
+
+        return result;
+    }
+
+private:
+    void dfs(vector<vector<int>>& heights, vector<vector<bool>>& ocean, int r, int c) {
+
+        if (ocean[r][c]) {
+            return;
+        }
+
+        ocean[r][c] = true;
+
+        int rows = heights.size();
+        int cols = heights[0].size();
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+        for (int d = 0; d < 4; d++) {
+
+            int nr = r + dirs[d][0];
+            int nc = c + dirs[d][1];
+
+            if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) {
+                continue;
+            }
+
+            // from the ocean we can only climb up (or stay level)
+            if (heights[nr][nc] >= heights[r][c]) {
+                dfs(heights, ocean, nr, nc);
+            }
+        }
     }
 };
 
 // @@ 93
 class Solution {
-    void mark(vector<vector<char>>& b, int r, int c) {
-        if (r < 0 || c < 0 || r >= (int)b.size() || c >= (int)b[0].size() || b[r][c] != 'O') return;
-        b[r][c] = 'T';  // safe: connected to the border
-        mark(b, r + 1, c); mark(b, r - 1, c); mark(b, r, c + 1); mark(b, r, c - 1);
-    }
 public:
     void solve(vector<vector<char>>& board) {
-        int rows = board.size(), cols = board[0].size();
-        for (int r = 0; r < rows; r++) { mark(board, r, 0); mark(board, r, cols - 1); }
-        for (int c = 0; c < cols; c++) { mark(board, 0, c); mark(board, rows - 1, c); }
-        for (auto& row : board)
-            for (char& ch : row) ch = ch == 'O' ? 'X' : ch == 'T' ? 'O' : ch;
+
+        int rows = board.size();
+        int cols = board[0].size();
+
+        for (int r = 0; r < rows; r++) {
+            mark(board, r, 0);
+            mark(board, r, cols - 1);
+        }
+
+        for (int c = 0; c < cols; c++) {
+            mark(board, 0, c);
+            mark(board, rows - 1, c);
+        }
+
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+
+                if (board[r][c] == 'O') {
+                    board[r][c] = 'X';
+                }
+
+                else if (board[r][c] == 'T') {
+                    board[r][c] = 'O';
+                }
+            }
+        }
+    }
+
+private:
+    void mark(vector<vector<char>>& board, int r, int c) {
+
+        if (r < 0 || c < 0 || r >= (int)board.size() || c >= (int)board[0].size()) {
+            return;
+        }
+
+        if (board[r][c] != 'O') {
+            return;
+        }
+
+        board[r][c] = 'T';  // safe: connected to the border
+
+        mark(board, r + 1, c);
+        mark(board, r - 1, c);
+        mark(board, r, c + 1);
+        mark(board, r, c - 1);
     }
 };
 
@@ -114,30 +242,65 @@ public:
 class Solution {
 public:
     int orangesRotting(vector<vector<int>>& grid) {
-        int rows = grid.size(), cols = grid[0].size(), fresh = 0;
-        queue<pair<int, int>> q;
-        for (int r = 0; r < rows; r++)
+
+        int rows = grid.size();
+        int cols = grid[0].size();
+        int fresh = 0;
+
+        queue<pair<int, int>> queue;
+
+        for (int r = 0; r < rows; r++) {
             for (int c = 0; c < cols; c++) {
-                if (grid[r][c] == 2) q.push({r, c});
-                else if (grid[r][c] == 1) fresh++;
+
+                if (grid[r][c] == 2) {
+                    queue.push({r, c});
+                }
+
+                else if (grid[r][c] == 1) {
+                    fresh++;
+                }
             }
-        int minutes = 0, dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};
-        while (!q.empty() && fresh) {
-            for (int i = q.size(); i > 0; i--) {  // one BFS level = one minute
-                auto [r, c] = q.front();
-                q.pop();
+        }
+
+        int minutes = 0;
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+        while (!queue.empty() && fresh > 0) {
+
+            // one BFS level = one minute
+            int size = queue.size();
+
+            for (int i = 0; i < size; i++) {
+
+                int r = queue.front().first;
+                int c = queue.front().second;
+                queue.pop();
+
                 for (int d = 0; d < 4; d++) {
-                    int nr = r + dr[d], nc = c + dc[d];
-                    if (nr >= 0 && nc >= 0 && nr < rows && nc < cols && grid[nr][nc] == 1) {
+
+                    int nr = r + dirs[d][0];
+                    int nc = c + dirs[d][1];
+
+                    if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) {
+                        continue;
+                    }
+
+                    if (grid[nr][nc] == 1) {
                         grid[nr][nc] = 2;
                         fresh--;
-                        q.push({nr, nc});
+                        queue.push({nr, nc});
                     }
                 }
             }
+
             minutes++;
         }
-        return fresh ? -1 : minutes;
+
+        if (fresh > 0) {
+            return -1;
+        }
+
+        return minutes;
     }
 };
 
@@ -145,27 +308,47 @@ public:
 class Solution {
 public:
     vector<vector<int>> updateMatrix(vector<vector<int>>& mat) {
-        int rows = mat.size(), cols = mat[0].size();
+
+        int rows = mat.size();
+        int cols = mat[0].size();
+
         vector<vector<int>> dist(rows, vector<int>(cols, -1));
-        queue<pair<int, int>> q;
-        for (int r = 0; r < rows; r++)
-            for (int c = 0; c < cols; c++)
+        queue<pair<int, int>> queue;
+
+        // every zero is a source
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
                 if (mat[r][c] == 0) {
                     dist[r][c] = 0;
-                    q.push({r, c});  // every zero is a source
-                }
-        int dr[] = {1, -1, 0, 0}, dc[] = {0, 0, 1, -1};
-        while (!q.empty()) {
-            auto [r, c] = q.front();
-            q.pop();
-            for (int d = 0; d < 4; d++) {
-                int nr = r + dr[d], nc = c + dc[d];
-                if (nr >= 0 && nc >= 0 && nr < rows && nc < cols && dist[nr][nc] == -1) {
-                    dist[nr][nc] = dist[r][c] + 1;
-                    q.push({nr, nc});
+                    queue.push({r, c});
                 }
             }
         }
+
+        int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+        while (!queue.empty()) {
+
+            int r = queue.front().first;
+            int c = queue.front().second;
+            queue.pop();
+
+            for (int d = 0; d < 4; d++) {
+
+                int nr = r + dirs[d][0];
+                int nc = c + dirs[d][1];
+
+                if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) {
+                    continue;
+                }
+
+                if (dist[nr][nc] == -1) {
+                    dist[nr][nc] = dist[r][c] + 1;
+                    queue.push({nr, nc});
+                }
+            }
+        }
+
         return dist;
     }
 };
@@ -174,23 +357,42 @@ public:
 class Solution {
 public:
     bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {
-        vector<vector<int>> adj(numCourses);
-        vector<int> indeg(numCourses, 0);
-        for (auto& p : prerequisites) {  // [course, pre] means pre -> course
-            adj[p[1]].push_back(p[0]);
-            indeg[p[0]]++;
+
+        vector<vector<int>> graph(numCourses);
+        vector<int> indegree(numCourses, 0);
+
+        // [course, pre] means pre -> course
+        for (vector<int>& prereq : prerequisites) {
+            int course = prereq[0];
+            int pre = prereq[1];
+            graph[pre].push_back(course);
+            indegree[course]++;
         }
-        queue<int> q;
-        for (int i = 0; i < numCourses; i++)
-            if (indeg[i] == 0) q.push(i);
+
+        queue<int> queue;
+
+        for (int i = 0; i < numCourses; i++) {
+            if (indegree[i] == 0) {
+                queue.push(i);
+            }
+        }
+
         int taken = 0;
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
+
+        while (!queue.empty()) {
+
+            int course = queue.front();
+            queue.pop();
             taken++;
-            for (int v : adj[u])
-                if (--indeg[v] == 0) q.push(v);
+
+            for (int next : graph[course]) {
+                indegree[next]--;
+                if (indegree[next] == 0) {
+                    queue.push(next);
+                }
+            }
         }
+
         return taken == numCourses;
     }
 };
@@ -199,23 +401,47 @@ public:
 class Solution {
 public:
     vector<int> findOrder(int numCourses, vector<vector<int>>& prerequisites) {
-        vector<vector<int>> adj(numCourses);
-        vector<int> indeg(numCourses, 0), order;
-        for (auto& p : prerequisites) {
-            adj[p[1]].push_back(p[0]);
-            indeg[p[0]]++;
+
+        vector<vector<int>> graph(numCourses);
+        vector<int> indegree(numCourses, 0);
+
+        // [course, pre] means pre -> course
+        for (vector<int>& prereq : prerequisites) {
+            int course = prereq[0];
+            int pre = prereq[1];
+            graph[pre].push_back(course);
+            indegree[course]++;
         }
-        queue<int> q;
-        for (int i = 0; i < numCourses; i++)
-            if (indeg[i] == 0) q.push(i);
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
-            order.push_back(u);
-            for (int v : adj[u])
-                if (--indeg[v] == 0) q.push(v);
+
+        queue<int> queue;
+
+        for (int i = 0; i < numCourses; i++) {
+            if (indegree[i] == 0) {
+                queue.push(i);
+            }
         }
-        if ((int)order.size() < numCourses) return {};  // cycle
+
+        vector<int> order;
+
+        while (!queue.empty()) {
+
+            int course = queue.front();
+            queue.pop();
+            order.push_back(course);
+
+            for (int next : graph[course]) {
+                indegree[next]--;
+                if (indegree[next] == 0) {
+                    queue.push(next);
+                }
+            }
+        }
+
+        // a cycle leaves some courses untaken
+        if ((int)order.size() < numCourses) {
+            return {};
+        }
+
         return order;
     }
 };
@@ -223,73 +449,125 @@ public:
 // @@ 98
 class Solution {
     vector<int> parent;
+
+public:
+    vector<int> findRedundantConnection(vector<vector<int>>& edges) {
+
+        int n = edges.size();
+        parent.resize(n + 1);
+
+        for (int i = 0; i <= n; i++) {
+            parent[i] = i;
+        }
+
+        for (vector<int>& edge : edges) {
+
+            int rootA = find(edge[0]);
+            int rootB = find(edge[1]);
+
+            // already connected: this edge closes a cycle
+            if (rootA == rootB) {
+                return edge;
+            }
+
+            parent[rootA] = rootB;
+        }
+
+        return {};
+    }
+
+private:
     int find(int x) {
+
         while (parent[x] != x) {
             parent[x] = parent[parent[x]];  // path halving
             x = parent[x];
         }
+
         return x;
-    }
-public:
-    vector<int> findRedundantConnection(vector<vector<int>>& edges) {
-        parent.resize(edges.size() + 1);
-        iota(parent.begin(), parent.end(), 0);
-        for (auto& e : edges) {
-            int ra = find(e[0]), rb = find(e[1]);
-            if (ra == rb) return e;  // already connected: this edge closes a cycle
-            parent[ra] = rb;
-        }
-        return {};
     }
 };
 
 // @@ 99
 class Solution {
-    void dfs(vector<vector<int>>& g, vector<bool>& seen, int i) {
-        for (int j = 0; j < (int)g.size(); j++)
-            if (g[i][j] && !seen[j]) {
-                seen[j] = true;
-                dfs(g, seen, j);
-            }
-    }
 public:
     int findCircleNum(vector<vector<int>>& isConnected) {
-        int n = isConnected.size(), provinces = 0;
-        vector<bool> seen(n, false);
+
+        int n = isConnected.size();
+        int provinces = 0;
+
+        vector<bool> visited(n, false);
+
         for (int i = 0; i < n; i++) {
-            if (seen[i]) continue;
-            seen[i] = true;
-            dfs(isConnected, seen, i);
+
+            if (visited[i]) {
+                continue;
+            }
+
+            visited[i] = true;
+            dfs(isConnected, visited, i);
             provinces++;
         }
+
         return provinces;
+    }
+
+private:
+    void dfs(vector<vector<int>>& isConnected, vector<bool>& visited, int city) {
+
+        for (int j = 0; j < (int)isConnected.size(); j++) {
+
+            if (isConnected[city][j] == 1 && !visited[j]) {
+                visited[j] = true;
+                dfs(isConnected, visited, j);
+            }
+        }
     }
 };
 
 // @@ 100
 class Solution {
     vector<int> parent;
+
+public:
+    int makeConnected(int n, vector<vector<int>>& connections) {
+
+        // not enough cables
+        if ((int)connections.size() < n - 1) {
+            return -1;
+        }
+
+        parent.resize(n);
+
+        for (int i = 0; i < n; i++) {
+            parent[i] = i;
+        }
+
+        int components = n;
+
+        for (vector<int>& cable : connections) {
+
+            int rootA = find(cable[0]);
+            int rootB = find(cable[1]);
+
+            if (rootA != rootB) {
+                parent[rootA] = rootB;
+                components--;
+            }
+        }
+
+        return components - 1;
+    }
+
+private:
     int find(int x) {
+
         while (parent[x] != x) {
             parent[x] = parent[parent[x]];
             x = parent[x];
         }
+
         return x;
-    }
-public:
-    int makeConnected(int n, vector<vector<int>>& connections) {
-        if ((int)connections.size() < n - 1) return -1;  // not enough cables
-        parent.resize(n);
-        iota(parent.begin(), parent.end(), 0);
-        int components = n;
-        for (auto& c : connections) {
-            int ra = find(c[0]), rb = find(c[1]);
-            if (ra != rb) {
-                parent[ra] = rb;
-                components--;
-            }
-        }
-        return components - 1;
     }
 };
 
@@ -297,32 +575,64 @@ public:
 class Solution {
 public:
     int ladderLength(string beginWord, string endWord, vector<string>& wordList) {
+
         unordered_set<string> words(wordList.begin(), wordList.end());
-        if (!words.count(endWord)) return 0;
-        unordered_map<string, vector<string>> buckets;  // "h*t" -> words matching it
+
+        if (words.count(endWord) == 0) {
+            return 0;
+        }
+
         words.insert(beginWord);
-        for (const string& w : words)
-            for (int i = 0; i < (int)w.size(); i++) {
-                string key = w;
-                key[i] = '*';
-                buckets[key].push_back(w);
-            }
-        queue<string> q;
-        q.push(beginWord);
-        unordered_set<string> seen{beginWord};
-        for (int steps = 1; !q.empty(); steps++) {
-            for (int k = q.size(); k > 0; k--) {
-                string w = q.front();
-                q.pop();
-                if (w == endWord) return steps;
-                for (int i = 0; i < (int)w.size(); i++) {
-                    string key = w;
-                    key[i] = '*';
-                    for (const string& next : buckets[key])
-                        if (seen.insert(next).second) q.push(next);
-                }
+
+        // "h*t" -> every word matching that pattern
+        unordered_map<string, vector<string>> buckets;
+
+        for (const string& word : words) {
+            for (int i = 0; i < (int)word.size(); i++) {
+                string pattern = word;
+                pattern[i] = '*';
+                buckets[pattern].push_back(word);
             }
         }
+
+        queue<string> queue;
+        queue.push(beginWord);
+
+        unordered_set<string> visited;
+        visited.insert(beginWord);
+
+        int steps = 1;
+
+        while (!queue.empty()) {
+
+            int size = queue.size();
+
+            for (int k = 0; k < size; k++) {
+
+                string word = queue.front();
+                queue.pop();
+
+                if (word == endWord) {
+                    return steps;
+                }
+
+                for (int i = 0; i < (int)word.size(); i++) {
+
+                    string pattern = word;
+                    pattern[i] = '*';
+
+                    for (const string& next : buckets[pattern]) {
+                        if (visited.count(next) == 0) {
+                            visited.insert(next);
+                            queue.push(next);
+                        }
+                    }
+                }
+            }
+
+            steps++;
+        }
+
         return 0;
     }
 };

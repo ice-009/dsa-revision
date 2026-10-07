@@ -2,209 +2,387 @@
 
 // @@ 19
 function maxProfit(prices) {
-  let lowest = Infinity, best = 0;
-  for (const p of prices) {
-    lowest = Math.min(lowest, p);
-    best = Math.max(best, p - lowest);
+
+  let lowest = Infinity;
+  let best = 0;
+
+  for (const price of prices) {
+    lowest = Math.min(lowest, price);
+    best = Math.max(best, price - lowest);
   }
+
   return best;
 }
 
 // @@ 20
 function lengthOfLongestSubstring(s) {
+
   const last = new Map(); // last index of each character
-  let l = 0, best = 0;
-  for (let r = 0; r < s.length; r++) {
-    if (last.has(s[r])) l = Math.max(l, last.get(s[r]) + 1);
-    last.set(s[r], r);
-    best = Math.max(best, r - l + 1);
+
+  let left = 0;
+  let best = 0;
+
+  for (let right = 0; right < s.length; right++) {
+
+    const ch = s[right];
+
+    if (last.has(ch) && last.get(ch) >= left) {
+      left = last.get(ch) + 1;
+    }
+
+    last.set(ch, right);
+    best = Math.max(best, right - left + 1);
   }
+
   return best;
 }
 
 // @@ 21
 function characterReplacement(s, k) {
+
   const count = new Array(26).fill(0);
-  let l = 0, maxF = 0, best = 0;
-  for (let r = 0; r < s.length; r++) {
-    maxF = Math.max(maxF, ++count[s.charCodeAt(r) - 65]);
-    while (r - l + 1 - maxF > k) {
-      count[s.charCodeAt(l) - 65]--;
-      l++;
+
+  let left = 0;
+  let maxFreq = 0;
+  let best = 0;
+
+  for (let right = 0; right < s.length; right++) {
+
+    const idx = s.charCodeAt(right) - 65;
+    count[idx]++;
+    maxFreq = Math.max(maxFreq, count[idx]);
+
+    while (right - left + 1 - maxFreq > k) {
+      count[s.charCodeAt(left) - 65]--;
+      left++;
     }
-    best = Math.max(best, r - l + 1);
+
+    best = Math.max(best, right - left + 1);
   }
+
   return best;
 }
 
 // @@ 22
 function checkInclusion(s1, s2) {
+
   const n = s1.length;
-  if (n > s2.length) return false;
-  const need = new Array(26).fill(0), window = new Array(26).fill(0);
+  const m = s2.length;
+
+  if (n > m) {
+    return false;
+  }
+
+  const need = new Array(26).fill(0);
+  const window = new Array(26).fill(0);
+
   for (let i = 0; i < n; i++) {
     need[s1.charCodeAt(i) - 97]++;
     window[s2.charCodeAt(i) - 97]++;
   }
-  const same = () => need.every((v, i) => v === window[i]);
-  if (same()) return true;
-  for (let r = n; r < s2.length; r++) {
-    window[s2.charCodeAt(r) - 97]++;
-    window[s2.charCodeAt(r - n) - 97]--;
-    if (same()) return true;
+
+  function sameCounts() {
+    for (let i = 0; i < 26; i++) {
+      if (need[i] !== window[i]) {
+        return false;
+      }
+    }
+    return true;
   }
+
+  if (sameCounts()) {
+    return true;
+  }
+
+  for (let right = n; right < m; right++) {
+
+    window[s2.charCodeAt(right) - 97]++;
+    window[s2.charCodeAt(right - n) - 97]--;
+
+    if (sameCounts()) {
+      return true;
+    }
+  }
+
   return false;
 }
 
 // @@ 23
 function maxSlidingWindow(nums, k) {
-  const q = []; // indices, values decreasing
-  let head = 0; // q[head] is the front (avoids O(n) shift)
-  const res = [];
-  for (let r = 0; r < nums.length; r++) {
-    while (q.length > head && nums[q[q.length - 1]] < nums[r]) q.pop();
-    q.push(r);
-    if (q[head] <= r - k) head++;
-    if (r >= k - 1) res.push(nums[q[head]]);
+
+  const dq = []; // indices, values decreasing from front to back
+  let front = 0; // dq[front] is the real front (avoids O(n) shift)
+  const ans = [];
+
+  for (let right = 0; right < nums.length; right++) {
+
+    while (dq.length > front && nums[dq[dq.length - 1]] < nums[right]) {
+      dq.pop();
+    }
+
+    dq.push(right);
+
+    if (dq[front] <= right - k) {
+      front++;
+    }
+
+    if (right >= k - 1) {
+      ans.push(nums[dq[front]]);
+    }
   }
-  return res;
+
+  return ans;
 }
 
 // @@ 24
 function minWindow(s, t) {
-  if (!s || !t) return '';
+
+  if (s.length === 0 || t.length === 0) {
+    return '';
+  }
+
   const need = new Map();
-  for (const c of t) need.set(c, (need.get(c) || 0) + 1);
+  for (const ch of t) {
+    need.set(ch, (need.get(ch) || 0) + 1);
+  }
+
   const window = new Map();
   const required = need.size;
-  let have = 0, bestLen = Infinity, bestL = 0, l = 0;
-  for (let r = 0; r < s.length; r++) {
-    const c = s[r];
-    window.set(c, (window.get(c) || 0) + 1);
-    if (need.has(c) && window.get(c) === need.get(c)) have++;
+
+  let have = 0;
+  let left = 0;
+  let bestLen = Infinity;
+  let bestStart = 0;
+
+  for (let right = 0; right < s.length; right++) {
+
+    const ch = s[right];
+    window.set(ch, (window.get(ch) || 0) + 1);
+
+    if (need.has(ch) && window.get(ch) === need.get(ch)) {
+      have++;
+    }
+
     while (have === required) {
-      if (r - l + 1 < bestLen) {
-        bestLen = r - l + 1;
-        bestL = l;
+
+      if (right - left + 1 < bestLen) {
+        bestLen = right - left + 1;
+        bestStart = left;
       }
-      const d = s[l++];
-      window.set(d, window.get(d) - 1);
-      if (need.has(d) && window.get(d) < need.get(d)) have--;
+
+      const out = s[left];
+      if (need.has(out) && window.get(out) === need.get(out)) {
+        have--;
+      }
+      window.set(out, window.get(out) - 1);
+
+      left++;
     }
   }
-  return bestLen === Infinity ? '' : s.slice(bestL, bestL + bestLen);
+
+  if (bestLen === Infinity) {
+    return '';
+  }
+
+  return s.slice(bestStart, bestStart + bestLen);
 }
 
 // @@ 26
 function isValid(s) {
+
   const match = { ')': '(', ']': '[', '}': '{' };
   const stack = [];
+
   for (const ch of s) {
+
     if (ch in match) {
-      if (stack.length === 0 || stack[stack.length - 1] !== match[ch]) return false;
+
+      if (stack.length === 0 || stack[stack.length - 1] !== match[ch]) {
+        return false;
+      }
+
       stack.pop();
-    } else {
+    }
+
+    else {
       stack.push(ch);
     }
   }
+
   return stack.length === 0;
 }
 
 // @@ 27
 class MinStack {
   constructor() {
-    this.st = []; // [value, min so far]
+    this.stack = []; // [value, min so far]
   }
 
   push(val) {
-    const low = this.st.length ? Math.min(val, this.st[this.st.length - 1][1]) : val;
-    this.st.push([val, low]);
+
+    let low = val;
+
+    if (this.stack.length > 0) {
+      low = Math.min(val, this.stack[this.stack.length - 1][1]);
+    }
+
+    this.stack.push([val, low]);
   }
 
   pop() {
-    this.st.pop();
+    this.stack.pop();
   }
 
   top() {
-    return this.st[this.st.length - 1][0];
+    return this.stack[this.stack.length - 1][0];
   }
 
   getMin() {
-    return this.st[this.st.length - 1][1];
+    return this.stack[this.stack.length - 1][1];
   }
 }
 
 // @@ 28
 function evalRPN(tokens) {
-  const st = [];
-  for (const tok of tokens) {
-    if (tok === '+' || tok === '-' || tok === '*' || tok === '/') {
-      const b = st.pop(), a = st.pop();
-      if (tok === '+') st.push(a + b);
-      else if (tok === '-') st.push(a - b);
-      else if (tok === '*') st.push(a * b);
-      else st.push(Math.trunc(a / b)); // truncate toward zero
-    } else {
-      st.push(Number(tok));
+
+  const stack = [];
+
+  for (const token of tokens) {
+
+    if (token === '+' || token === '-' || token === '*' || token === '/') {
+
+      const b = stack.pop();
+      const a = stack.pop();
+
+      if (token === '+') {
+        stack.push(a + b);
+      }
+      else if (token === '-') {
+        stack.push(a - b);
+      }
+      else if (token === '*') {
+        stack.push(a * b);
+      }
+      else {
+        stack.push(Math.trunc(a / b)); // truncate toward zero
+      }
+    }
+
+    else {
+      stack.push(Number(token));
     }
   }
-  return st[0];
+
+  return stack[0];
 }
 
 // @@ 29
 function generateParenthesis(n) {
-  const res = [];
-  const bt = (cur, open, closed) => {
-    if (cur.length === 2 * n) {
-      res.push(cur);
+
+  const ans = [];
+
+  function backtrack(curr, opened, closed) {
+
+    if (curr.length === 2 * n) {
+      ans.push(curr);
       return;
     }
-    if (open < n) bt(cur + '(', open + 1, closed);
-    if (closed < open) bt(cur + ')', open, closed + 1);
-  };
-  bt('', 0, 0);
-  return res;
+
+    if (opened < n) {
+      backtrack(curr + '(', opened + 1, closed);
+    }
+
+    if (closed < opened) {
+      backtrack(curr + ')', opened, closed + 1);
+    }
+  }
+
+  backtrack('', 0, 0);
+
+  return ans;
 }
 
 // @@ 30
 function dailyTemperatures(temperatures) {
-  const ans = new Array(temperatures.length).fill(0);
-  const st = []; // indices still waiting, temps decreasing
-  for (let i = 0; i < temperatures.length; i++) {
-    while (st.length && temperatures[st[st.length - 1]] < temperatures[i]) {
-      const j = st.pop();
+
+  const n = temperatures.length;
+  const ans = new Array(n).fill(0);
+  const stack = []; // indices still waiting, temps decreasing
+
+  for (let i = 0; i < n; i++) {
+
+    while (stack.length > 0 && temperatures[stack[stack.length - 1]] < temperatures[i]) {
+      const j = stack.pop();
       ans[j] = i - j;
     }
-    st.push(i);
+
+    stack.push(i);
   }
+
   return ans;
 }
 
 // @@ 31
 function carFleet(target, position, speed) {
-  const cars = position.map((p, i) => [p, speed[i]]).sort((a, b) => b[0] - a[0]); // closest first
-  const st = []; // arrival time of each fleet
-  for (const [p, s] of cars) {
-    const t = (target - p) / s;
-    if (!st.length || t > st[st.length - 1]) st.push(t);
+
+  const n = position.length;
+
+  const cars = [];
+  for (let i = 0; i < n; i++) {
+    cars.push([position[i], speed[i]]);
   }
-  return st.length;
+
+  // closest to target first
+  cars.sort(function (a, b) {
+    return b[0] - a[0];
+  });
+
+  const stack = []; // arrival time of each fleet
+
+  for (const car of cars) {
+
+    const time = (target - car[0]) / car[1];
+
+    if (stack.length === 0 || time > stack[stack.length - 1]) {
+      stack.push(time);
+    }
+  }
+
+  return stack.length;
 }
 
 // @@ 32
 function largestRectangleArea(heights) {
-  const st = []; // [start index, height], heights increasing
-  let best = 0;
+
   const n = heights.length;
+  const stack = []; // [start index, height], heights increasing
+  let best = 0;
+
   for (let i = 0; i < n; i++) {
+
     let start = i;
-    while (st.length && st[st.length - 1][1] > heights[i]) {
-      const [idx, h] = st.pop();
-      best = Math.max(best, h * (i - idx));
+
+    while (stack.length > 0 && stack[stack.length - 1][1] > heights[i]) {
+
+      const top = stack.pop();
+      const idx = top[0];
+      const height = top[1];
+
+      best = Math.max(best, height * (i - idx));
       start = idx;
     }
-    st.push([start, heights[i]]);
+
+    stack.push([start, heights[i]]);
   }
-  for (const [idx, h] of st) best = Math.max(best, h * (n - idx));
+
+  while (stack.length > 0) {
+
+    const top = stack.pop();
+    const idx = top[0];
+    const height = top[1];
+
+    best = Math.max(best, height * (n - idx));
+  }
+
   return best;
 }

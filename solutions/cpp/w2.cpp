@@ -4,11 +4,15 @@
 class Solution {
 public:
     int maxProfit(vector<int>& prices) {
-        int lowest = INT_MAX, best = 0;
-        for (int p : prices) {
-            lowest = min(lowest, p);
-            best = max(best, p - lowest);
+
+        int lowest = INT_MAX;
+        int best = 0;
+
+        for (int price : prices) {
+            lowest = min(lowest, price);
+            best = max(best, price - lowest);
         }
+
         return best;
     }
 };
@@ -17,13 +21,24 @@ public:
 class Solution {
 public:
     int lengthOfLongestSubstring(string s) {
+
         vector<int> last(128, -1);  // last index of each character
-        int l = 0, best = 0;
-        for (int r = 0; r < (int)s.size(); r++) {
-            if (last[s[r]] >= 0) l = max(l, last[s[r]] + 1);
-            last[s[r]] = r;
-            best = max(best, r - l + 1);
+
+        int left = 0;
+        int best = 0;
+
+        for (int right = 0; right < (int)s.size(); right++) {
+
+            char ch = s[right];
+
+            if (last[ch] >= left) {
+                left = last[ch] + 1;
+            }
+
+            last[ch] = right;
+            best = max(best, right - left + 1);
         }
+
         return best;
     }
 };
@@ -32,16 +47,26 @@ public:
 class Solution {
 public:
     int characterReplacement(string s, int k) {
-        int count[26] = {0};
-        int l = 0, maxF = 0, best = 0;
-        for (int r = 0; r < (int)s.size(); r++) {
-            maxF = max(maxF, ++count[s[r] - 'A']);
-            while ((r - l + 1) - maxF > k) {
-                count[s[l] - 'A']--;
-                l++;
+
+        vector<int> count(26, 0);
+
+        int left = 0;
+        int maxFreq = 0;
+        int best = 0;
+
+        for (int right = 0; right < (int)s.size(); right++) {
+
+            count[s[right] - 'A']++;
+            maxFreq = max(maxFreq, count[s[right] - 'A']);
+
+            while ((right - left + 1) - maxFreq > k) {
+                count[s[left] - 'A']--;
+                left++;
             }
-            best = max(best, r - l + 1);
+
+            best = max(best, right - left + 1);
         }
+
         return best;
     }
 };
@@ -50,19 +75,36 @@ public:
 class Solution {
 public:
     bool checkInclusion(string s1, string s2) {
+
         int n = s1.size();
-        if (n > (int)s2.size()) return false;
-        vector<int> need(26, 0), window(26, 0);
+        int m = s2.size();
+
+        if (n > m) {
+            return false;
+        }
+
+        vector<int> need(26, 0);
+        vector<int> window(26, 0);
+
         for (int i = 0; i < n; i++) {
             need[s1[i] - 'a']++;
             window[s2[i] - 'a']++;
         }
-        if (need == window) return true;
-        for (int r = n; r < (int)s2.size(); r++) {
-            window[s2[r] - 'a']++;
-            window[s2[r - n] - 'a']--;
-            if (need == window) return true;
+
+        if (need == window) {
+            return true;
         }
+
+        for (int right = n; right < m; right++) {
+
+            window[s2[right] - 'a']++;
+            window[s2[right - n] - 'a']--;
+
+            if (need == window) {
+                return true;
+            }
+        }
+
         return false;
     }
 };
@@ -71,15 +113,28 @@ public:
 class Solution {
 public:
     vector<int> maxSlidingWindow(vector<int>& nums, int k) {
-        deque<int> q;  // indices, values decreasing
-        vector<int> res;
-        for (int r = 0; r < (int)nums.size(); r++) {
-            while (!q.empty() && nums[q.back()] < nums[r]) q.pop_back();
-            q.push_back(r);
-            if (q.front() <= r - k) q.pop_front();
-            if (r >= k - 1) res.push_back(nums[q.front()]);
+
+        deque<int> dq;  // indices, values decreasing from front to back
+        vector<int> ans;
+
+        for (int right = 0; right < (int)nums.size(); right++) {
+
+            while (!dq.empty() && nums[dq.back()] < nums[right]) {
+                dq.pop_back();
+            }
+
+            dq.push_back(right);
+
+            if (dq.front() <= right - k) {
+                dq.pop_front();
+            }
+
+            if (right >= k - 1) {
+                ans.push_back(nums[dq.front()]);
+            }
         }
-        return res;
+
+        return ans;
     }
 };
 
@@ -87,25 +142,58 @@ public:
 class Solution {
 public:
     string minWindow(string s, string t) {
-        if (s.empty() || t.empty()) return "";
-        vector<int> need(128, 0), window(128, 0);
+
+        if (s.empty() || t.empty()) {
+            return "";
+        }
+
+        vector<int> need(128, 0);
+        vector<int> window(128, 0);
+
         int required = 0;
-        for (char c : t)
-            if (need[c]++ == 0) required++;
-        int have = 0, bestLen = INT_MAX, bestL = 0, l = 0;
-        for (int r = 0; r < (int)s.size(); r++) {
-            char c = s[r];
-            if (++window[c] == need[c]) have++;
+        for (char ch : t) {
+            if (need[ch] == 0) {
+                required++;
+            }
+            need[ch]++;
+        }
+
+        int have = 0;
+        int left = 0;
+        int bestLen = INT_MAX;
+        int bestStart = 0;
+
+        for (int right = 0; right < (int)s.size(); right++) {
+
+            char ch = s[right];
+            window[ch]++;
+
+            if (window[ch] == need[ch]) {
+                have++;
+            }
+
             while (have == required) {
-                if (r - l + 1 < bestLen) {
-                    bestLen = r - l + 1;
-                    bestL = l;
+
+                if (right - left + 1 < bestLen) {
+                    bestLen = right - left + 1;
+                    bestStart = left;
                 }
-                char d = s[l++];
-                if (window[d]-- == need[d]) have--;
+
+                char out = s[left];
+                if (window[out] == need[out]) {
+                    have--;
+                }
+                window[out]--;
+
+                left++;
             }
         }
-        return bestLen == INT_MAX ? "" : s.substr(bestL, bestLen);
+
+        if (bestLen == INT_MAX) {
+            return "";
+        }
+
+        return s.substr(bestStart, bestLen);
     }
 };
 
@@ -113,83 +201,133 @@ public:
 class Solution {
 public:
     bool isValid(string s) {
+
         unordered_map<char, char> match = {{')', '('}, {']', '['}, {'}', '{'}};
-        vector<char> stack;
+        stack<char> st;
+
         for (char ch : s) {
+
             if (match.count(ch)) {
-                if (stack.empty() || stack.back() != match[ch]) return false;
-                stack.pop_back();
-            } else {
-                stack.push_back(ch);
+
+                if (st.empty() || st.top() != match[ch]) {
+                    return false;
+                }
+
+                st.pop();
+            }
+
+            else {
+                st.push(ch);
             }
         }
-        return stack.empty();
+
+        return st.empty();
     }
 };
 
 // @@ 27
 class MinStack {
-    vector<pair<int, int>> st;  // (value, min so far)
-public:
-    MinStack() {}
+    stack<pair<int, int>> st;  // (value, min so far)
 
-    void push(int val) {
-        int low = st.empty() ? val : min(val, st.back().second);
-        st.push_back({val, low});
+public:
+    MinStack() {
     }
 
-    void pop() { st.pop_back(); }
+    void push(int val) {
 
-    int top() { return st.back().first; }
+        int low = val;
 
-    int getMin() { return st.back().second; }
+        if (!st.empty()) {
+            low = min(val, st.top().second);
+        }
+
+        st.push({val, low});
+    }
+
+    void pop() {
+        st.pop();
+    }
+
+    int top() {
+        return st.top().first;
+    }
+
+    int getMin() {
+        return st.top().second;
+    }
 };
 
 // @@ 28
 class Solution {
 public:
     int evalRPN(vector<string>& tokens) {
-        vector<long long> st;
-        for (const string& tok : tokens) {
-            if (tok == "+" || tok == "-" || tok == "*" || tok == "/") {
-                long long b = st.back(); st.pop_back();
-                long long a = st.back(); st.pop_back();
-                if (tok == "+") st.push_back(a + b);
-                else if (tok == "-") st.push_back(a - b);
-                else if (tok == "*") st.push_back(a * b);
-                else st.push_back(a / b);  // C++ division truncates toward zero
-            } else {
-                st.push_back(stoll(tok));
+
+        stack<int> st;
+
+        for (string& token : tokens) {
+
+            if (token == "+" || token == "-" || token == "*" || token == "/") {
+
+                int b = st.top();
+                st.pop();
+
+                int a = st.top();
+                st.pop();
+
+                if (token == "+") {
+                    st.push(a + b);
+                }
+                else if (token == "-") {
+                    st.push(a - b);
+                }
+                else if (token == "*") {
+                    st.push(a * b);
+                }
+                else {
+                    st.push(a / b);  // C++ division truncates toward zero
+                }
+            }
+
+            else {
+                st.push(stoi(token));
             }
         }
-        return (int)st.back();
+
+        return st.top();
     }
 };
 
 // @@ 29
 class Solution {
-    vector<string> res;
-    void bt(string& cur, int open, int closed, int n) {
-        if ((int)cur.size() == 2 * n) {
-            res.push_back(cur);
+    vector<string> ans;
+
+    void backtrack(string& curr, int opened, int closed, int n) {
+
+        if ((int)curr.size() == 2 * n) {
+            ans.push_back(curr);
             return;
         }
-        if (open < n) {
-            cur.push_back('(');
-            bt(cur, open + 1, closed, n);
-            cur.pop_back();
+
+        if (opened < n) {
+            curr.push_back('(');
+            backtrack(curr, opened + 1, closed, n);
+            curr.pop_back();
         }
-        if (closed < open) {
-            cur.push_back(')');
-            bt(cur, open, closed + 1, n);
-            cur.pop_back();
+
+        if (closed < opened) {
+            curr.push_back(')');
+            backtrack(curr, opened, closed + 1, n);
+            curr.pop_back();
         }
     }
+
 public:
     vector<string> generateParenthesis(int n) {
-        string cur;
-        bt(cur, 0, 0, n);
-        return res;
+
+        string curr = "";
+        backtrack(curr, 0, 0, n);
+
+        return ans;
     }
 };
 
@@ -197,16 +335,22 @@ public:
 class Solution {
 public:
     vector<int> dailyTemperatures(vector<int>& temperatures) {
+
         int n = temperatures.size();
-        vector<int> ans(n, 0), st;  // st: indices still waiting, temps decreasing
+        vector<int> ans(n, 0);
+        stack<int> st;  // indices still waiting, temps decreasing
+
         for (int i = 0; i < n; i++) {
-            while (!st.empty() && temperatures[st.back()] < temperatures[i]) {
-                int j = st.back();
-                st.pop_back();
+
+            while (!st.empty() && temperatures[st.top()] < temperatures[i]) {
+                int j = st.top();
+                st.pop();
                 ans[j] = i - j;
             }
-            st.push_back(i);
+
+            st.push(i);
         }
+
         return ans;
     }
 };
@@ -215,15 +359,28 @@ public:
 class Solution {
 public:
     int carFleet(int target, vector<int>& position, vector<int>& speed) {
+
         int n = position.size();
-        vector<pair<int, int>> cars(n);
-        for (int i = 0; i < n; i++) cars[i] = {position[i], speed[i]};
-        sort(cars.rbegin(), cars.rend());  // closest to target first
-        vector<double> st;                 // arrival time of each fleet
-        for (auto& [p, s] : cars) {
-            double t = (double)(target - p) / s;
-            if (st.empty() || t > st.back()) st.push_back(t);
+
+        vector<pair<int, int>> cars;
+        for (int i = 0; i < n; i++) {
+            cars.push_back({position[i], speed[i]});
         }
+
+        sort(cars.begin(), cars.end());
+
+        stack<double> st;  // arrival time of each fleet
+
+        // walk from the car closest to the target
+        for (int i = n - 1; i >= 0; i--) {
+
+            double time = (double)(target - cars[i].first) / cars[i].second;
+
+            if (st.empty() || time > st.top()) {
+                st.push(time);
+            }
+        }
+
         return st.size();
     }
 };
@@ -232,19 +389,37 @@ public:
 class Solution {
 public:
     int largestRectangleArea(vector<int>& heights) {
-        vector<pair<int, int>> st;  // (start index, height), heights increasing
-        int best = 0, n = heights.size();
+
+        int n = heights.size();
+        stack<pair<int, int>> st;  // (start index, height), heights increasing
+        int best = 0;
+
         for (int i = 0; i < n; i++) {
+
             int start = i;
-            while (!st.empty() && st.back().second > heights[i]) {
-                auto [idx, h] = st.back();
-                st.pop_back();
-                best = max(best, h * (i - idx));
+
+            while (!st.empty() && st.top().second > heights[i]) {
+
+                int idx = st.top().first;
+                int height = st.top().second;
+                st.pop();
+
+                best = max(best, height * (i - idx));
                 start = idx;
             }
-            st.push_back({start, heights[i]});
+
+            st.push({start, heights[i]});
         }
-        for (auto& [idx, h] : st) best = max(best, h * (n - idx));
+
+        while (!st.empty()) {
+
+            int idx = st.top().first;
+            int height = st.top().second;
+            st.pop();
+
+            best = max(best, height * (n - idx));
+        }
+
         return best;
     }
 };

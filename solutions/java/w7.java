@@ -3,87 +3,169 @@
 // @@ 103
 class Solution {
     public int networkDelayTime(int[][] times, int n, int k) {
-        List<List<int[]>> adj = new ArrayList<>();
-        for (int i = 0; i <= n; i++) adj.add(new ArrayList<>());
-        for (int[] t : times) adj.get(t[0]).add(new int[]{t[1], t[2]});  // u -> {v, w}
+
+        // graph[u] = list of {v, w}
+        List<List<int[]>> graph = new ArrayList<>();
+        for (int i = 0; i <= n; i++) {
+            graph.add(new ArrayList<>());
+        }
+        for (int[] t : times) {
+            graph.get(t[0]).add(new int[]{t[1], t[2]});
+        }
+
         int[] dist = new int[n + 1];
         Arrays.fill(dist, Integer.MAX_VALUE);
-        PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[0] - b[0]);  // {time, node}, min first
-        pq.add(new int[]{0, k});
-        while (!pq.isEmpty()) {
-            int[] top = pq.poll();
-            int d = top[0], u = top[1];
-            if (dist[u] != Integer.MAX_VALUE) continue;  // already final
-            dist[u] = d;
-            for (int[] e : adj.get(u))
-                if (dist[e[0]] == Integer.MAX_VALUE) pq.add(new int[]{d + e[1], e[0]});
+
+        // {time, node}, smallest time first
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> a[0] - b[0]);
+        heap.add(new int[]{0, k});
+
+        while (!heap.isEmpty()) {
+
+            int[] top = heap.poll();
+            int time = top[0];
+            int node = top[1];
+
+            if (dist[node] != Integer.MAX_VALUE) {
+                continue;  // already final
+            }
+
+            dist[node] = time;
+
+            for (int[] edge : graph.get(node)) {
+                int next = edge[0];
+                int w = edge[1];
+
+                if (dist[next] == Integer.MAX_VALUE) {
+                    heap.add(new int[]{time + w, next});
+                }
+            }
         }
-        int best = 0;
+
+        int ans = 0;
+
         for (int i = 1; i <= n; i++) {
-            if (dist[i] == Integer.MAX_VALUE) return -1;
-            best = Math.max(best, dist[i]);
+            if (dist[i] == Integer.MAX_VALUE) {
+                return -1;
+            }
+            ans = Math.max(ans, dist[i]);
         }
-        return best;
+
+        return ans;
     }
 }
 
 // @@ 104
 class Solution {
     public int findCheapestPrice(int n, int[][] flights, int src, int dst, int k) {
-        final int INF = Integer.MAX_VALUE;
+
         int[] price = new int[n];
-        Arrays.fill(price, INF);
+        Arrays.fill(price, Integer.MAX_VALUE);
         price[src] = 0;
-        for (int round = 0; round <= k; round++) {  // at most k + 1 flights
-            int[] next = price.clone();              // relax from last round only
+
+        // at most k + 1 flights
+        for (int round = 0; round <= k; round++) {
+
+            // relax only from last round's prices
+            int[] next = price.clone();
+
             for (int[] f : flights) {
-                int u = f[0], v = f[1], w = f[2];
-                if (price[u] != INF && price[u] + w < next[v]) next[v] = price[u] + w;
+                int from = f[0];
+                int to = f[1];
+                int cost = f[2];
+
+                if (price[from] == Integer.MAX_VALUE) {
+                    continue;
+                }
+
+                if (price[from] + cost < next[to]) {
+                    next[to] = price[from] + cost;
+                }
             }
+
             price = next;
         }
-        return price[dst] == INF ? -1 : price[dst];
+
+        if (price[dst] == Integer.MAX_VALUE) {
+            return -1;
+        }
+
+        return price[dst];
     }
 }
 
 // @@ 105
 class Solution {
     public int minCostConnectPoints(int[][] points) {
-        int n = points.length, total = 0;
+
+        int n = points.length;
+
         int[] dist = new int[n];  // cheapest edge from the tree to each point
         Arrays.fill(dist, Integer.MAX_VALUE);
         boolean[] inTree = new boolean[n];
         dist[0] = 0;
+
+        int total = 0;
+
         for (int step = 0; step < n; step++) {
+
+            // pick the closest point not yet in the tree
             int u = -1;
-            for (int i = 0; i < n; i++)
-                if (!inTree[i] && (u == -1 || dist[i] < dist[u])) u = i;
+            for (int i = 0; i < n; i++) {
+                if (!inTree[i] && (u == -1 || dist[i] < dist[u])) {
+                    u = i;
+                }
+            }
+
             inTree[u] = true;
             total += dist[u];
+
+            // update distances through u
             for (int v = 0; v < n; v++) {
-                if (inTree[v]) continue;
+                if (inTree[v]) {
+                    continue;
+                }
+
                 int d = Math.abs(points[u][0] - points[v][0]) + Math.abs(points[u][1] - points[v][1]);
                 dist[v] = Math.min(dist[v], d);
             }
         }
+
         return total;
     }
 }
 
 // @@ 106
 class Solution {
-    private final Map<String, PriorityQueue<String>> adj = new HashMap<>();  // smallest destination first
-    private final LinkedList<String> route = new LinkedList<>();
+    private Map<String, PriorityQueue<String>> graph = new HashMap<>();  // smallest destination first
+    private LinkedList<String> route = new LinkedList<>();
 
     public List<String> findItinerary(List<List<String>> tickets) {
-        for (List<String> t : tickets) adj.computeIfAbsent(t.get(0), k -> new PriorityQueue<>()).add(t.get(1));
+
+        for (List<String> t : tickets) {
+            String from = t.get(0);
+            String to = t.get(1);
+
+            if (!graph.containsKey(from)) {
+                graph.put(from, new PriorityQueue<>());
+            }
+            graph.get(from).add(to);
+        }
+
         dfs("JFK");
+
         return route;
     }
 
     private void dfs(String airport) {
-        PriorityQueue<String> out = adj.get(airport);
-        while (out != null && !out.isEmpty()) dfs(out.poll());  // use this ticket
+
+        PriorityQueue<String> dests = graph.get(airport);
+
+        while (dests != null && !dests.isEmpty()) {
+            String next = dests.poll();  // use this ticket
+            dfs(next);
+        }
+
         route.addFirst(airport);  // post-order, built back to front
     }
 }
@@ -91,23 +173,47 @@ class Solution {
 // @@ 107
 class Solution {
     public int swimInWater(int[][] grid) {
+
         int n = grid.length;
-        PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[0] - b[0]);  // {max so far, r, c}
+
+        // {max height so far, row, col}, smallest first
+        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> a[0] - b[0]);
         boolean[][] seen = new boolean[n][n];
-        pq.add(new int[]{grid[0][0], 0, 0});
+
+        heap.add(new int[]{grid[0][0], 0, 0});
         seen[0][0] = true;
+
         int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-        while (!pq.isEmpty()) {
-            int[] top = pq.poll();
-            int t = top[0], r = top[1], c = top[2];
-            if (r == n - 1 && c == n - 1) return t;
+
+        while (!heap.isEmpty()) {
+
+            int[] top = heap.poll();
+            int time = top[0];
+            int r = top[1];
+            int c = top[2];
+
+            if (r == n - 1 && c == n - 1) {
+                return time;
+            }
+
             for (int[] d : dirs) {
-                int nr = r + d[0], nc = c + d[1];
-                if (nr < 0 || nc < 0 || nr >= n || nc >= n || seen[nr][nc]) continue;
+
+                int nr = r + d[0];
+                int nc = c + d[1];
+
+                if (nr < 0 || nc < 0 || nr >= n || nc >= n) {
+                    continue;
+                }
+
+                if (seen[nr][nc]) {
+                    continue;
+                }
+
                 seen[nr][nc] = true;
-                pq.add(new int[]{Math.max(t, grid[nr][nc]), nr, nc});
+                heap.add(new int[]{Math.max(time, grid[nr][nc]), nr, nc});
             }
         }
+
         return -1;
     }
 }
@@ -115,84 +221,151 @@ class Solution {
 // @@ 108
 class Solution {
     public int[] sortItems(int n, int m, int[] group, List<List<Integer>> beforeItems) {
-        for (int i = 0; i < n; i++)
-            if (group[i] == -1) group[i] = m++;  // lone item -> its own group
-        List<int[]> itemEdges = new ArrayList<>(), groupEdges = new ArrayList<>();
-        for (int b = 0; b < n; b++)
+
+        // give each lone item its own group
+        for (int i = 0; i < n; i++) {
+            if (group[i] == -1) {
+                group[i] = m;
+                m++;
+            }
+        }
+
+        List<int[]> itemEdges = new ArrayList<>();
+        List<int[]> groupEdges = new ArrayList<>();
+
+        for (int b = 0; b < n; b++) {
             for (int a : beforeItems.get(b)) {  // a must come before b
                 itemEdges.add(new int[]{a, b});
-                if (group[a] != group[b]) groupEdges.add(new int[]{group[a], group[b]});
+
+                if (group[a] != group[b]) {
+                    groupEdges.add(new int[]{group[a], group[b]});
+                }
             }
-        List<Integer> itemOrder = topo(n, itemEdges), groupOrder = topo(m, groupEdges);
-        if (itemOrder == null || groupOrder == null) return new int[0];
+        }
+
+        List<Integer> itemOrder = topoSort(n, itemEdges);
+        List<Integer> groupOrder = topoSort(m, groupEdges);
+
+        if (itemOrder == null || groupOrder == null) {
+            return new int[0];
+        }
+
+        // items of each group, already in item order
         List<List<Integer>> members = new ArrayList<>();
-        for (int g = 0; g < m; g++) members.add(new ArrayList<>());
-        for (int item : itemOrder) members.get(group[item]).add(item);
-        int[] res = new int[n];
+        for (int g = 0; g < m; g++) {
+            members.add(new ArrayList<>());
+        }
+        for (int item : itemOrder) {
+            members.get(group[item]).add(item);
+        }
+
+        int[] ans = new int[n];
         int idx = 0;
-        for (int g : groupOrder)
-            for (int item : members.get(g)) res[idx++] = item;
-        return res;
+
+        for (int g : groupOrder) {
+            for (int item : members.get(g)) {
+                ans[idx] = item;
+                idx++;
+            }
+        }
+
+        return ans;
     }
 
     // Kahn's algorithm over nodes 0..count-1; null if there is a cycle
-    private List<Integer> topo(int count, List<int[]> edges) {
-        List<List<Integer>> adj = new ArrayList<>();
-        for (int i = 0; i < count; i++) adj.add(new ArrayList<>());
+    private List<Integer> topoSort(int count, List<int[]> edges) {
+
+        List<List<Integer>> graph = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            graph.add(new ArrayList<>());
+        }
+
         int[] indeg = new int[count];
+
         for (int[] e : edges) {
-            adj.get(e[0]).add(e[1]);
+            graph.get(e[0]).add(e[1]);
             indeg[e[1]]++;
         }
+
         Queue<Integer> q = new ArrayDeque<>();
-        for (int i = 0; i < count; i++)
-            if (indeg[i] == 0) q.add(i);
+        for (int i = 0; i < count; i++) {
+            if (indeg[i] == 0) {
+                q.add(i);
+            }
+        }
+
         List<Integer> order = new ArrayList<>();
+
         while (!q.isEmpty()) {
+
             int u = q.poll();
             order.add(u);
-            for (int v : adj.get(u))
-                if (--indeg[v] == 0) q.add(v);
+
+            for (int v : graph.get(u)) {
+                indeg[v]--;
+                if (indeg[v] == 0) {
+                    q.add(v);
+                }
+            }
         }
-        return order.size() == count ? order : null;
+
+        if (order.size() < count) {
+            return null;
+        }
+
+        return order;
     }
 }
 
 // @@ 110
 class Solution {
     public int climbStairs(int n) {
-        int a = 1, b = 1;  // ways to reach step i-2, i-1
+
+        int prev2 = 1;  // ways to reach step i-2
+        int prev1 = 1;  // ways to reach step i-1
+
         for (int i = 2; i <= n; i++) {
-            int c = a + b;
-            a = b;
-            b = c;
+            int cur = prev1 + prev2;
+            prev2 = prev1;
+            prev1 = cur;
         }
-        return b;
+
+        return prev1;
     }
 }
 
 // @@ 111
 class Solution {
     public int minCostClimbingStairs(int[] cost) {
-        int a = 0, b = 0;  // min cost to stand on step i-2, i-1
-        for (int i = 2; i <= cost.length; i++) {
-            int c = Math.min(b + cost[i - 1], a + cost[i - 2]);
-            a = b;
-            b = c;
+
+        int n = cost.length;
+
+        int prev2 = 0;  // min cost to stand on step i-2
+        int prev1 = 0;  // min cost to stand on step i-1
+
+        for (int i = 2; i <= n; i++) {
+            int cur = Math.min(prev1 + cost[i - 1], prev2 + cost[i - 2]);
+            prev2 = prev1;
+            prev1 = cur;
         }
-        return b;
+
+        return prev1;
     }
 }
 
 // @@ 112
 class Solution {
     public int rob(int[] nums) {
-        int prev2 = 0, prev1 = 0;  // best up to two houses back, best so far
-        for (int x : nums) {
-            int cur = Math.max(prev1, prev2 + x);  // skip it, or rob it
+
+        int prev2 = 0;  // best up to two houses back
+        int prev1 = 0;  // best so far
+
+        for (int money : nums) {
+            int cur = Math.max(prev1, prev2 + money);  // skip it, or rob it
             prev2 = prev1;
             prev1 = cur;
         }
+
         return prev1;
     }
 }
@@ -200,18 +373,30 @@ class Solution {
 // @@ 113
 class Solution {
     public int rob(int[] nums) {
+
         int n = nums.length;
-        if (n == 1) return nums[0];
-        return Math.max(robLine(nums, 0, n - 2), robLine(nums, 1, n - 1));  // drop last, or drop first
+
+        if (n == 1) {
+            return nums[0];
+        }
+
+        int skipLast = robLine(nums, 0, n - 2);
+        int skipFirst = robLine(nums, 1, n - 1);
+
+        return Math.max(skipLast, skipFirst);
     }
 
-    private int robLine(int[] nums, int lo, int hi) {
-        int prev2 = 0, prev1 = 0;
-        for (int i = lo; i <= hi; i++) {
+    private int robLine(int[] nums, int start, int end) {
+
+        int prev2 = 0;
+        int prev1 = 0;
+
+        for (int i = start; i <= end; i++) {
             int cur = Math.max(prev1, prev2 + nums[i]);
             prev2 = prev1;
             prev1 = cur;
         }
+
         return prev1;
     }
 }
@@ -219,38 +404,74 @@ class Solution {
 // @@ 114
 class Solution {
     public String longestPalindrome(String s) {
-        int n = s.length(), bestL = 0, bestLen = n > 0 ? 1 : 0;
+
+        int n = s.length();
+
+        int bestStart = 0;
+        int bestLen = 0;
+        if (n > 0) {
+            bestLen = 1;
+        }
+
         for (int center = 0; center < n; center++) {
-            for (int r0 = center; r0 <= center + 1; r0++) {  // odd, then even centre
-                int l = center, r = r0;
-                while (l >= 0 && r < n && s.charAt(l) == s.charAt(r)) {
-                    l--;
-                    r++;
-                }
-                if (r - l - 1 > bestLen) {  // palindrome is s[l+1 .. r-1]
-                    bestLen = r - l - 1;
-                    bestL = l + 1;
-                }
+
+            int[] odd = expand(s, center, center);
+            if (odd[1] > bestLen) {
+                bestStart = odd[0];
+                bestLen = odd[1];
+            }
+
+            int[] even = expand(s, center, center + 1);
+            if (even[1] > bestLen) {
+                bestStart = even[0];
+                bestLen = even[1];
             }
         }
-        return s.substring(bestL, bestL + bestLen);
+
+        return s.substring(bestStart, bestStart + bestLen);
+    }
+
+    // expand around l..r; returns {start, length} of the palindrome found
+    private int[] expand(String s, int l, int r) {
+
+        int n = s.length();
+
+        while (l >= 0 && r < n && s.charAt(l) == s.charAt(r)) {
+            l--;
+            r++;
+        }
+
+        return new int[]{l + 1, r - l - 1};
     }
 }
 
 // @@ 115
 class Solution {
     public int countSubstrings(String s) {
-        int n = s.length(), count = 0;
+
+        int n = s.length();
+        int ans = 0;
+
         for (int center = 0; center < n; center++) {
-            for (int r0 = center; r0 <= center + 1; r0++) {  // odd, then even centre
-                int l = center, r = r0;
-                while (l >= 0 && r < n && s.charAt(l) == s.charAt(r)) {
-                    count++;
-                    l--;
-                    r++;
-                }
-            }
+            ans += expand(s, center, center);      // odd length
+            ans += expand(s, center, center + 1);  // even length
         }
+
+        return ans;
+    }
+
+    // number of palindromes found by expanding around l..r
+    private int expand(String s, int l, int r) {
+
+        int n = s.length();
+        int count = 0;
+
+        while (l >= 0 && r < n && s.charAt(l) == s.charAt(r)) {
+            count++;
+            l--;
+            r++;
+        }
+
         return count;
     }
 }
@@ -258,17 +479,33 @@ class Solution {
 // @@ 116
 class Solution {
     public int numDecodings(String s) {
-        int prev2 = 0, prev1 = 1;  // ways for s[:i-2], s[:i-1]; empty prefix = 1
-        for (int i = 1; i <= s.length(); i++) {
+
+        int n = s.length();
+
+        int prev2 = 0;  // ways to decode s[:i-2]
+        int prev1 = 1;  // ways to decode s[:i-1]; empty prefix = 1
+
+        for (int i = 1; i <= n; i++) {
+
             int cur = 0;
-            if (s.charAt(i - 1) != '0') cur += prev1;  // single digit
-            if (i >= 2) {
-                int two = Integer.parseInt(s.substring(i - 2, i));
-                if (two >= 10 && two <= 26) cur += prev2;  // two digits
+
+            // single digit
+            if (s.charAt(i - 1) != '0') {
+                cur += prev1;
             }
+
+            // two digits
+            if (i >= 2) {
+                int two = (s.charAt(i - 2) - '0') * 10 + (s.charAt(i - 1) - '0');
+                if (two >= 10 && two <= 26) {
+                    cur += prev2;
+                }
+            }
+
             prev2 = prev1;
             prev1 = cur;
         }
+
         return prev1;
     }
 }
@@ -276,28 +513,51 @@ class Solution {
 // @@ 117
 class Solution {
     public int coinChange(int[] coins, int amount) {
+
         int INF = amount + 1;
+
         int[] dp = new int[amount + 1];  // dp[a] = fewest coins for a
         Arrays.fill(dp, INF);
         dp[0] = 0;
-        for (int a = 1; a <= amount; a++)
-            for (int c : coins)
-                if (c <= a) dp[a] = Math.min(dp[a], dp[a - c] + 1);
-        return dp[amount] == INF ? -1 : dp[amount];
+
+        for (int a = 1; a <= amount; a++) {
+            for (int coin : coins) {
+                if (coin <= a) {
+                    dp[a] = Math.min(dp[a], dp[a - coin] + 1);
+                }
+            }
+        }
+
+        if (dp[amount] == INF) {
+            return -1;
+        }
+
+        return dp[amount];
     }
 }
 
 // @@ 118
 class Solution {
     public int maxProduct(int[] nums) {
-        int best = nums[0], curMax = nums[0], curMin = nums[0];
+
+        int best = nums[0];
+        int curMax = nums[0];
+        int curMin = nums[0];
+
         for (int i = 1; i < nums.length; i++) {
+
             int x = nums[i];
-            int a = x * curMax, b = x * curMin;  // from the OLD values
-            curMax = Math.max(x, Math.max(a, b));
-            curMin = Math.min(x, Math.min(a, b));
+
+            // use the OLD curMax / curMin
+            int withMax = x * curMax;
+            int withMin = x * curMin;
+
+            curMax = Math.max(x, Math.max(withMax, withMin));
+            curMin = Math.min(x, Math.min(withMax, withMin));
+
             best = Math.max(best, curMax);
         }
+
         return best;
     }
 }
@@ -305,18 +565,28 @@ class Solution {
 // @@ 119
 class Solution {
     public boolean wordBreak(String s, List<String> wordDict) {
+
         Set<String> words = new HashSet<>(wordDict);
+
         int longest = 0;
-        for (String w : wordDict) longest = Math.max(longest, w.length());
+        for (String w : wordDict) {
+            longest = Math.max(longest, w.length());
+        }
+
         int n = s.length();
+
         boolean[] dp = new boolean[n + 1];  // dp[i]: s[0..i) can be segmented
         dp[0] = true;
-        for (int i = 1; i <= n; i++)
-            for (int j = Math.max(0, i - longest); j < i; j++)
+
+        for (int i = 1; i <= n; i++) {
+            for (int j = Math.max(0, i - longest); j < i; j++) {
                 if (dp[j] && words.contains(s.substring(j, i))) {
                     dp[i] = true;
                     break;
                 }
+            }
+        }
+
         return dp[n];
     }
 }
@@ -324,18 +594,32 @@ class Solution {
 // @@ 120
 class Solution {
     public int lengthOfLIS(int[] nums) {
+
         int[] tails = new int[nums.length];  // tails[k] = smallest tail of an increasing run of length k + 1
         int size = 0;
+
         for (int x : nums) {
-            int lo = 0, hi = size;  // first tail >= x
+
+            // binary search for the first tail >= x
+            int lo = 0;
+            int hi = size;
+
             while (lo < hi) {
                 int mid = (lo + hi) / 2;
-                if (tails[mid] < x) lo = mid + 1;
-                else hi = mid;
+                if (tails[mid] < x) {
+                    lo = mid + 1;
+                } else {
+                    hi = mid;
+                }
             }
+
             tails[lo] = x;
-            if (lo == size) size++;
+
+            if (lo == size) {
+                size++;
+            }
         }
+
         return size;
     }
 }
@@ -343,14 +627,30 @@ class Solution {
 // @@ 121
 class Solution {
     public boolean canPartition(int[] nums) {
-        int total = Arrays.stream(nums).sum();
-        if (total % 2 == 1) return false;
+
+        int total = 0;
+        for (int x : nums) {
+            total += x;
+        }
+
+        if (total % 2 == 1) {
+            return false;
+        }
+
         int target = total / 2;
+
         boolean[] dp = new boolean[target + 1];  // dp[t]: some subset sums to t
         dp[0] = true;
-        for (int x : nums)
-            for (int t = target; t >= x; t--)  // downwards: each number used once
-                dp[t] = dp[t] || dp[t - x];
+
+        for (int x : nums) {
+            // go downwards so each number is used once
+            for (int t = target; t >= x; t--) {
+                if (dp[t - x]) {
+                    dp[t] = true;
+                }
+            }
+        }
+
         return dp[target];
     }
 }

@@ -4,13 +4,26 @@
 class Solution {
 public:
     int search(vector<int>& nums, int target) {
-        int l = 0, r = (int)nums.size() - 1;
-        while (l <= r) {
-            int mid = l + (r - l) / 2;
-            if (nums[mid] == target) return mid;
-            if (nums[mid] < target) l = mid + 1;
-            else r = mid - 1;
+
+        int left = 0;
+        int right = nums.size() - 1;
+
+        while (left <= right) {
+
+            int mid = left + (right - left) / 2;
+
+            if (nums[mid] == target) {
+                return mid;
+            }
+
+            if (nums[mid] < target) {
+                left = mid + 1;
+            }
+            else {
+                right = mid - 1;
+            }
         }
+
         return -1;
     }
 };
@@ -19,15 +32,30 @@ public:
 class Solution {
 public:
     bool searchMatrix(vector<vector<int>>& matrix, int target) {
-        int rows = matrix.size(), cols = matrix[0].size();
-        int l = 0, r = rows * cols - 1;
-        while (l <= r) {
-            int mid = l + (r - l) / 2;
-            int v = matrix[mid / cols][mid % cols];
-            if (v == target) return true;
-            if (v < target) l = mid + 1;
-            else r = mid - 1;
+
+        int rows = matrix.size();
+        int cols = matrix[0].size();
+
+        int left = 0;
+        int right = rows * cols - 1;
+
+        while (left <= right) {
+
+            int mid = left + (right - left) / 2;
+            int value = matrix[mid / cols][mid % cols];
+
+            if (value == target) {
+                return true;
+            }
+
+            if (value < target) {
+                left = mid + 1;
+            }
+            else {
+                right = mid - 1;
+            }
         }
+
         return false;
     }
 };
@@ -36,15 +64,31 @@ public:
 class Solution {
 public:
     int minEatingSpeed(vector<int>& piles, int h) {
-        int lo = 1, hi = *max_element(piles.begin(), piles.end());
-        while (lo < hi) {
-            int k = lo + (hi - lo) / 2;
-            long long hours = 0;
-            for (int p : piles) hours += (p + k - 1) / k;  // ceil(p / k)
-            if (hours <= h) hi = k;
-            else lo = k + 1;
+
+        int left = 1;
+        int right = 0;
+        for (int pile : piles) {
+            right = max(right, pile);
         }
-        return lo;
+
+        while (left < right) {
+
+            int speed = left + (right - left) / 2;
+
+            long long hours = 0;
+            for (int pile : piles) {
+                hours += (pile + speed - 1) / speed;  // ceil(pile / speed)
+            }
+
+            if (hours <= h) {
+                right = speed;
+            }
+            else {
+                left = speed + 1;
+            }
+        }
+
+        return left;
     }
 };
 
@@ -52,13 +96,23 @@ public:
 class Solution {
 public:
     int findMin(vector<int>& nums) {
-        int l = 0, r = nums.size() - 1;
-        while (l < r) {
-            int mid = l + (r - l) / 2;
-            if (nums[mid] > nums[r]) l = mid + 1;  // minimum is right of mid
-            else r = mid;
+
+        int left = 0;
+        int right = nums.size() - 1;
+
+        while (left < right) {
+
+            int mid = left + (right - left) / 2;
+
+            if (nums[mid] > nums[right]) {
+                left = mid + 1;  // minimum is right of mid
+            }
+            else {
+                right = mid;
+            }
         }
-        return nums[l];
+
+        return nums[left];
     }
 };
 
@@ -66,41 +120,81 @@ public:
 class Solution {
 public:
     int search(vector<int>& nums, int target) {
-        int l = 0, r = (int)nums.size() - 1;
-        while (l <= r) {
-            int mid = l + (r - l) / 2;
-            if (nums[mid] == target) return mid;
-            if (nums[l] <= nums[mid]) {  // left half sorted
-                if (nums[l] <= target && target < nums[mid]) r = mid - 1;
-                else l = mid + 1;
-            } else {                     // right half sorted
-                if (nums[mid] < target && target <= nums[r]) l = mid + 1;
-                else r = mid - 1;
+
+        int left = 0;
+        int right = nums.size() - 1;
+
+        while (left <= right) {
+
+            int mid = left + (right - left) / 2;
+
+            if (nums[mid] == target) {
+                return mid;
+            }
+
+            if (nums[left] <= nums[mid]) {
+                // left half is sorted
+                if (nums[left] <= target && target < nums[mid]) {
+                    right = mid - 1;
+                }
+                else {
+                    left = mid + 1;
+                }
+            }
+            else {
+                // right half is sorted
+                if (nums[mid] < target && target <= nums[right]) {
+                    left = mid + 1;
+                }
+                else {
+                    right = mid - 1;
+                }
             }
         }
+
         return -1;
     }
 };
 
 // @@ 39
 class TimeMap {
-    unordered_map<string, vector<pair<int, string>>> store;  // key -> (timestamp, value), time order
+    // key -> list of (timestamp, value), in increasing time order
+    unordered_map<string, vector<pair<int, string>>> store;
+
 public:
-    TimeMap() {}
+    TimeMap() {
+    }
 
     void set(string key, string value, int timestamp) {
         store[key].push_back({timestamp, value});
     }
 
     string get(string key, int timestamp) {
-        auto& items = store[key];
-        int lo = 0, hi = items.size();  // first index with time > timestamp
-        while (lo < hi) {
-            int mid = (lo + hi) / 2;
-            if (items[mid].first <= timestamp) lo = mid + 1;
-            else hi = mid;
+
+        if (store.count(key) == 0) {
+            return "";
         }
-        return lo ? items[lo - 1].second : "";
+
+        vector<pair<int, string>>& items = store[key];
+
+        string ans = "";
+        int left = 0;
+        int right = items.size() - 1;
+
+        while (left <= right) {
+
+            int mid = left + (right - left) / 2;
+
+            if (items[mid].first <= timestamp) {
+                ans = items[mid].second;
+                left = mid + 1;
+            }
+            else {
+                right = mid - 1;
+            }
+        }
+
+        return ans;
     }
 };
 
@@ -108,21 +202,46 @@ public:
 class Solution {
 public:
     double findMedianSortedArrays(vector<int>& nums1, vector<int>& nums2) {
-        vector<int>& A = nums1.size() <= nums2.size() ? nums1 : nums2;  // A is the shorter
-        vector<int>& B = nums1.size() <= nums2.size() ? nums2 : nums1;
-        int m = A.size(), n = B.size(), half = (m + n + 1) / 2;
-        int lo = 0, hi = m;
-        while (lo <= hi) {
-            int i = (lo + hi) / 2, j = half - i;
-            int aLeft = i > 0 ? A[i - 1] : INT_MIN, aRight = i < m ? A[i] : INT_MAX;
-            int bLeft = j > 0 ? B[j - 1] : INT_MIN, bRight = j < n ? B[j] : INT_MAX;
-            if (aLeft <= bRight && bLeft <= aRight) {
-                if ((m + n) % 2) return max(aLeft, bLeft);
-                return (max(aLeft, bLeft) + (double)min(aRight, bRight)) / 2.0;
-            }
-            if (aLeft > bRight) hi = i - 1;
-            else lo = i + 1;
+
+        // always binary search the shorter array
+        if (nums1.size() > nums2.size()) {
+            return findMedianSortedArrays(nums2, nums1);
         }
+
+        int m = nums1.size();
+        int n = nums2.size();
+        int half = (m + n + 1) / 2;
+
+        int low = 0;
+        int high = m;
+
+        while (low <= high) {
+
+            int i = (low + high) / 2;  // items taken from nums1
+            int j = half - i;          // items taken from nums2
+
+            int left1 = (i > 0) ? nums1[i - 1] : INT_MIN;
+            int right1 = (i < m) ? nums1[i] : INT_MAX;
+            int left2 = (j > 0) ? nums2[j - 1] : INT_MIN;
+            int right2 = (j < n) ? nums2[j] : INT_MAX;
+
+            if (left1 <= right2 && left2 <= right1) {
+
+                if ((m + n) % 2 == 1) {
+                    return max(left1, left2);
+                }
+
+                return (max(left1, left2) + (double)min(right1, right2)) / 2.0;
+            }
+
+            if (left1 > right2) {
+                high = i - 1;
+            }
+            else {
+                low = i + 1;
+            }
+        }
+
         return 0;
     }
 };
@@ -131,13 +250,17 @@ public:
 class Solution {
 public:
     ListNode* reverseList(ListNode* head) {
-        ListNode *prev = nullptr, *cur = head;
-        while (cur) {
-            ListNode* nxt = cur->next;
-            cur->next = prev;
-            prev = cur;
-            cur = nxt;
+
+        ListNode* prev = nullptr;
+        ListNode* curr = head;
+
+        while (curr != nullptr) {
+            ListNode* next = curr->next;
+            curr->next = prev;
+            prev = curr;
+            curr = next;
         }
+
         return prev;
     }
 };
@@ -146,19 +269,31 @@ public:
 class Solution {
 public:
     ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {
+
         ListNode dummy;
         ListNode* tail = &dummy;
-        while (list1 && list2) {
+
+        while (list1 != nullptr && list2 != nullptr) {
+
             if (list1->val <= list2->val) {
                 tail->next = list1;
                 list1 = list1->next;
-            } else {
+            }
+            else {
                 tail->next = list2;
                 list2 = list2->next;
             }
+
             tail = tail->next;
         }
-        tail->next = list1 ? list1 : list2;
+
+        if (list1 != nullptr) {
+            tail->next = list1;
+        }
+        else {
+            tail->next = list2;
+        }
+
         return dummy.next;
     }
 };
@@ -167,12 +302,20 @@ public:
 class Solution {
 public:
     bool hasCycle(ListNode* head) {
-        ListNode *slow = head, *fast = head;
-        while (fast && fast->next) {
+
+        ListNode* slow = head;
+        ListNode* fast = head;
+
+        while (fast != nullptr && fast->next != nullptr) {
+
             slow = slow->next;
             fast = fast->next->next;
-            if (slow == fast) return true;
+
+            if (slow == fast) {
+                return true;
+            }
         }
+
         return false;
     }
 };
@@ -181,30 +324,42 @@ public:
 class Solution {
 public:
     void reorderList(ListNode* head) {
-        // 1) middle: slow ends at the end of the first half
-        ListNode *slow = head, *fast = head->next;
-        while (fast && fast->next) {
+
+        // 1. find the middle (slow ends at the end of the first half)
+        ListNode* slow = head;
+        ListNode* fast = head->next;
+
+        while (fast != nullptr && fast->next != nullptr) {
             slow = slow->next;
             fast = fast->next->next;
         }
-        // 2) cut and reverse the second half
-        ListNode *second = slow->next, *prev = nullptr;
+
+        // 2. cut the list and reverse the second half
+        ListNode* curr = slow->next;
         slow->next = nullptr;
-        while (second) {
-            ListNode* nxt = second->next;
-            second->next = prev;
-            prev = second;
-            second = nxt;
+
+        ListNode* prev = nullptr;
+        while (curr != nullptr) {
+            ListNode* next = curr->next;
+            curr->next = prev;
+            prev = curr;
+            curr = next;
         }
-        // 3) weave the two halves
+
+        // 3. weave the two halves together
         ListNode* first = head;
-        second = prev;
-        while (second) {
-            ListNode *n1 = first->next, *n2 = second->next;
+        ListNode* second = prev;
+
+        while (second != nullptr) {
+
+            ListNode* next1 = first->next;
+            ListNode* next2 = second->next;
+
             first->next = second;
-            second->next = n1;
-            first = n1;
-            second = n2;
+            second->next = next1;
+
+            first = next1;
+            second = next2;
         }
     }
 };
@@ -213,14 +368,23 @@ public:
 class Solution {
 public:
     ListNode* removeNthFromEnd(ListNode* head, int n) {
+
         ListNode dummy(0, head);
-        ListNode *slow = &dummy, *fast = &dummy;
-        for (int i = 0; i <= n; i++) fast = fast->next;  // gap of n + 1
-        while (fast) {
+        ListNode* slow = &dummy;
+        ListNode* fast = &dummy;
+
+        // put a gap of n + 1 nodes between fast and slow
+        for (int i = 0; i <= n; i++) {
+            fast = fast->next;
+        }
+
+        while (fast != nullptr) {
             slow = slow->next;
             fast = fast->next;
         }
+
         slow->next = slow->next->next;
+
         return dummy.next;
     }
 };
@@ -229,12 +393,21 @@ public:
 class Solution {
 public:
     Node* copyRandomList(Node* head) {
-        unordered_map<Node*, Node*> clone{{nullptr, nullptr}};
-        for (Node* cur = head; cur; cur = cur->next) clone[cur] = new Node(cur->val);
-        for (Node* cur = head; cur; cur = cur->next) {
-            clone[cur]->next = clone[cur->next];
-            clone[cur]->random = clone[cur->random];
+
+        unordered_map<Node*, Node*> clone;
+        clone[nullptr] = nullptr;
+
+        // pass 1: create a copy of every node
+        for (Node* curr = head; curr != nullptr; curr = curr->next) {
+            clone[curr] = new Node(curr->val);
         }
+
+        // pass 2: connect next and random pointers
+        for (Node* curr = head; curr != nullptr; curr = curr->next) {
+            clone[curr]->next = clone[curr->next];
+            clone[curr]->random = clone[curr->random];
+        }
+
         return clone[head];
     }
 };
@@ -243,17 +416,30 @@ public:
 class Solution {
 public:
     ListNode* addTwoNumbers(ListNode* l1, ListNode* l2) {
+
         ListNode dummy;
         ListNode* tail = &dummy;
         int carry = 0;
-        while (l1 || l2 || carry) {
-            int total = carry + (l1 ? l1->val : 0) + (l2 ? l2->val : 0);
+
+        while (l1 != nullptr || l2 != nullptr || carry != 0) {
+
+            int total = carry;
+
+            if (l1 != nullptr) {
+                total += l1->val;
+                l1 = l1->next;
+            }
+
+            if (l2 != nullptr) {
+                total += l2->val;
+                l2 = l2->next;
+            }
+
             carry = total / 10;
             tail->next = new ListNode(total % 10);
             tail = tail->next;
-            if (l1) l1 = l1->next;
-            if (l2) l2 = l2->next;
         }
+
         return dummy.next;
     }
 };
@@ -262,47 +448,105 @@ public:
 class Solution {
 public:
     int findDuplicate(vector<int>& nums) {
-        int slow = 0, fast = 0;
-        do {  // phase 1: meet inside the cycle
+
+        // phase 1: slow and fast meet inside the cycle
+        int slow = nums[0];
+        int fast = nums[nums[0]];
+
+        while (slow != fast) {
             slow = nums[slow];
             fast = nums[nums[fast]];
-        } while (slow != fast);
-        int slow2 = 0;  // phase 2: meet at the cycle entrance
+        }
+
+        // phase 2: they meet again at the cycle entrance
+        int slow2 = 0;
+
         while (slow != slow2) {
             slow = nums[slow];
             slow2 = nums[slow2];
         }
+
         return slow;
     }
 };
 
 // @@ 50
 class LRUCache {
+
+    struct Node {
+        int key;
+        int val;
+        Node* prev;
+        Node* next;
+
+        Node(int k, int v) {
+            key = k;
+            val = v;
+            prev = nullptr;
+            next = nullptr;
+        }
+    };
+
     int cap;
-    list<pair<int, int>> items;  // (key, value), front = most recently used
-    unordered_map<int, list<pair<int, int>>::iterator> pos;
+    unordered_map<int, Node*> map;
+    Node* head;  // head->next is the most recently used
+    Node* tail;  // tail->prev is the least recently used
+
+    void remove(Node* node) {
+        node->prev->next = node->next;
+        node->next->prev = node->prev;
+    }
+
+    void addToFront(Node* node) {
+        node->prev = head;
+        node->next = head->next;
+        head->next->prev = node;
+        head->next = node;
+    }
+
 public:
-    LRUCache(int capacity) : cap(capacity) {}
+    LRUCache(int capacity) {
+
+        cap = capacity;
+
+        head = new Node(0, 0);
+        tail = new Node(0, 0);
+
+        head->next = tail;
+        tail->prev = head;
+    }
 
     int get(int key) {
-        auto it = pos.find(key);
-        if (it == pos.end()) return -1;
-        items.splice(items.begin(), items, it->second);  // move to front, O(1)
-        return it->second->second;
+
+        if (map.count(key) == 0) {
+            return -1;
+        }
+
+        Node* node = map[key];
+        remove(node);
+        addToFront(node);
+
+        return node->val;
     }
 
     void put(int key, int value) {
-        auto it = pos.find(key);
-        if (it != pos.end()) {
-            it->second->second = value;
-            items.splice(items.begin(), items, it->second);
-            return;
+
+        if (map.count(key) > 0) {
+            Node* old = map[key];
+            remove(old);
+            map.erase(key);
+            delete old;
         }
-        items.emplace_front(key, value);
-        pos[key] = items.begin();
-        if ((int)pos.size() > cap) {  // evict least recently used
-            pos.erase(items.back().first);
-            items.pop_back();
+
+        Node* node = new Node(key, value);
+        map[key] = node;
+        addToFront(node);
+
+        if ((int)map.size() > cap) {
+            Node* lru = tail->prev;
+            remove(lru);
+            map.erase(lru->key);
+            delete lru;
         }
     }
 };
@@ -311,19 +555,35 @@ public:
 class Solution {
 public:
     ListNode* mergeKLists(vector<ListNode*>& lists) {
-        auto cmp = [](ListNode* a, ListNode* b) { return a->val > b->val; };
-        priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> pq(cmp);  // min-heap by val
-        for (ListNode* head : lists)
-            if (head) pq.push(head);
+
+        // min-heap ordered by node value
+        auto cmp = [](ListNode* a, ListNode* b) {
+            return a->val > b->val;
+        };
+        priority_queue<ListNode*, vector<ListNode*>, decltype(cmp)> heap(cmp);
+
+        for (ListNode* head : lists) {
+            if (head != nullptr) {
+                heap.push(head);
+            }
+        }
+
         ListNode dummy;
         ListNode* tail = &dummy;
-        while (!pq.empty()) {
-            ListNode* node = pq.top();
-            pq.pop();
+
+        while (!heap.empty()) {
+
+            ListNode* node = heap.top();
+            heap.pop();
+
             tail->next = node;
             tail = node;
-            if (node->next) pq.push(node->next);
+
+            if (node->next != nullptr) {
+                heap.push(node->next);
+            }
         }
+
         return dummy.next;
     }
 };
@@ -332,23 +592,40 @@ public:
 class Solution {
 public:
     ListNode* reverseKGroup(ListNode* head, int k) {
+
         ListNode dummy(0, head);
         ListNode* groupPrev = &dummy;
+
         while (true) {
+
+            // find the k-th node of this group
             ListNode* kth = groupPrev;
-            for (int i = 0; i < k && kth; i++) kth = kth->next;
-            if (!kth) return dummy.next;
-            ListNode* groupNext = kth->next;
-            ListNode *prev = groupNext, *cur = groupPrev->next;  // reverse the group
-            while (cur != groupNext) {
-                ListNode* nxt = cur->next;
-                cur->next = prev;
-                prev = cur;
-                cur = nxt;
+            for (int i = 0; i < k && kth != nullptr; i++) {
+                kth = kth->next;
             }
+
+            if (kth == nullptr) {
+                break;
+            }
+
+            ListNode* groupNext = kth->next;
+
+            // reverse the group; its first node will point to groupNext
+            ListNode* prev = groupNext;
+            ListNode* curr = groupPrev->next;
+
+            while (curr != groupNext) {
+                ListNode* next = curr->next;
+                curr->next = prev;
+                prev = curr;
+                curr = next;
+            }
+
             ListNode* first = groupPrev->next;
             groupPrev->next = kth;
             groupPrev = first;
         }
+
+        return dummy.next;
     }
 };

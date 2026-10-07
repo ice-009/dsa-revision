@@ -2,13 +2,25 @@
 
 // @@ 140
 class MyCalendar {
-    vector<pair<int, int>> booked;  // half-open [start, end)
+    vector<pair<int, int>> booked;
+
 public:
-    MyCalendar() {}
+    MyCalendar() {
+    }
 
     bool book(int start, int end) {
-        for (auto [s, e] : booked)
-            if (start < e && s < end) return false;  // overlap
+
+        for (int i = 0; i < (int)booked.size(); i++) {
+
+            int bookedStart = booked[i].first;
+            int bookedEnd = booked[i].second;
+
+            // half-open intervals overlap
+            if (start < bookedEnd && bookedStart < end) {
+                return false;
+            }
+        }
+
         booked.push_back({start, end});
         return true;
     }
@@ -18,17 +30,37 @@ public:
 class Solution {
 public:
     vector<vector<int>> insert(vector<vector<int>>& intervals, vector<int>& newInterval) {
-        vector<vector<int>> res;
-        int s = newInterval[0], e = newInterval[1], i = 0, n = intervals.size();
-        while (i < n && intervals[i][1] < s) res.push_back(intervals[i++]);  // entirely before
-        while (i < n && intervals[i][0] <= e) {                              // overlapping: merge
-            s = min(s, intervals[i][0]);
-            e = max(e, intervals[i][1]);
+
+        vector<vector<int>> ans;
+
+        int start = newInterval[0];
+        int end = newInterval[1];
+
+        int n = intervals.size();
+        int i = 0;
+
+        // intervals that end before the new one starts
+        while (i < n && intervals[i][1] < start) {
+            ans.push_back(intervals[i]);
             i++;
         }
-        res.push_back({s, e});
-        while (i < n) res.push_back(intervals[i++]);  // entirely after
-        return res;
+
+        // intervals that overlap the new one: merge them
+        while (i < n && intervals[i][0] <= end) {
+            start = min(start, intervals[i][0]);
+            end = max(end, intervals[i][1]);
+            i++;
+        }
+
+        ans.push_back({start, end});
+
+        // intervals after the new one
+        while (i < n) {
+            ans.push_back(intervals[i]);
+            i++;
+        }
+
+        return ans;
     }
 };
 
@@ -36,14 +68,25 @@ public:
 class Solution {
 public:
     vector<vector<int>> merge(vector<vector<int>>& intervals) {
-        sort(intervals.begin(), intervals.end());  // by start
+
+        sort(intervals.begin(), intervals.end());
+
         vector<vector<int>> merged;
-        for (auto& iv : intervals) {
-            if (!merged.empty() && iv[0] <= merged.back()[1])
-                merged.back()[1] = max(merged.back()[1], iv[1]);
-            else
-                merged.push_back(iv);
+
+        for (int i = 0; i < (int)intervals.size(); i++) {
+
+            int start = intervals[i][0];
+            int end = intervals[i][1];
+
+            if (!merged.empty() && start <= merged.back()[1]) {
+                merged.back()[1] = max(merged.back()[1], end);
+            }
+
+            else {
+                merged.push_back({start, end});
+            }
         }
+
         return merged;
     }
 };
@@ -52,16 +95,29 @@ public:
 class Solution {
 public:
     int eraseOverlapIntervals(vector<vector<int>>& intervals) {
-        sort(intervals.begin(), intervals.end(), [](auto& a, auto& b) { return a[1] < b[1]; });  // by end
+
+        sort(intervals.begin(), intervals.end(), compareByEnd);
+
         int kept = 0;
         long long prevEnd = LLONG_MIN;
-        for (auto& iv : intervals) {
-            if (iv[0] >= prevEnd) {  // fits after the last kept one
+
+        for (int i = 0; i < (int)intervals.size(); i++) {
+
+            int start = intervals[i][0];
+            int end = intervals[i][1];
+
+            if (start >= prevEnd) {
                 kept++;
-                prevEnd = iv[1];
+                prevEnd = end;
             }
         }
+
         return intervals.size() - kept;
+    }
+
+private:
+    static bool compareByEnd(const vector<int>& a, const vector<int>& b) {
+        return a[1] < b[1];
     }
 };
 
@@ -69,16 +125,30 @@ public:
 class Solution {
 public:
     bool carPooling(vector<vector<int>>& trips, int capacity) {
+
         vector<int> diff(1001, 0);
-        for (auto& t : trips) {
-            diff[t[1]] += t[0];  // passengers get in at `from`
-            diff[t[2]] -= t[0];  // and leave at `to`
+
+        for (int i = 0; i < (int)trips.size(); i++) {
+
+            int passengers = trips[i][0];
+            int from = trips[i][1];
+            int to = trips[i][2];
+
+            diff[from] += passengers;
+            diff[to] -= passengers;
         }
+
         int load = 0;
-        for (int change : diff) {
-            load += change;
-            if (load > capacity) return false;
+
+        for (int pos = 0; pos < (int)diff.size(); pos++) {
+
+            load += diff[pos];
+
+            if (load > capacity) {
+                return false;
+            }
         }
+
         return true;
     }
 };
@@ -87,41 +157,80 @@ public:
 class Solution {
 public:
     vector<int> minInterval(vector<vector<int>>& intervals, vector<int>& queries) {
-        sort(intervals.begin(), intervals.end());  // by start
-        vector<int> order(queries.size());
-        iota(order.begin(), order.end(), 0);
-        sort(order.begin(), order.end(), [&](int a, int b) { return queries[a] < queries[b]; });
-        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> heap;  // (size, right end)
+
+        sort(intervals.begin(), intervals.end());
+
+        // (query value, original index), sorted by value
+        vector<pair<int, int>> sortedQueries;
+        for (int i = 0; i < (int)queries.size(); i++) {
+            sortedQueries.push_back({queries[i], i});
+        }
+        sort(sortedQueries.begin(), sortedQueries.end());
+
+        // min-heap of (size, right end)
+        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> heap;
+
         vector<int> ans(queries.size());
         int i = 0;
-        for (int qi : order) {
-            int q = queries[qi];
+
+        for (int k = 0; k < (int)sortedQueries.size(); k++) {
+
+            int q = sortedQueries[k].first;
+            int index = sortedQueries[k].second;
+
             while (i < (int)intervals.size() && intervals[i][0] <= q) {
-                heap.push({intervals[i][1] - intervals[i][0] + 1, intervals[i][1]});
+                int left = intervals[i][0];
+                int right = intervals[i][1];
+                heap.push({right - left + 1, right});
                 i++;
             }
-            while (!heap.empty() && heap.top().second < q) heap.pop();  // ends before q
-            ans[qi] = heap.empty() ? -1 : heap.top().first;
+
+            while (!heap.empty() && heap.top().second < q) {
+                heap.pop();
+            }
+
+            if (heap.empty()) {
+                ans[index] = -1;
+            }
+
+            else {
+                ans[index] = heap.top().first;
+            }
         }
+
         return ans;
     }
 };
 
 // @@ 147
 class Solution {
-    int next(int x) {
-        int s = 0;
-        for (; x; x /= 10) s += (x % 10) * (x % 10);
-        return s;
-    }
 public:
     bool isHappy(int n) {
-        int slow = n, fast = next(n);  // Floyd: detect the cycle without a set
+
+        // Floyd: detect the cycle without a set
+        int slow = n;
+        int fast = next(n);
+
         while (fast != 1 && slow != fast) {
             slow = next(slow);
             fast = next(next(fast));
         }
+
         return fast == 1;
+    }
+
+private:
+    int next(int x) {
+
+        int sum = 0;
+
+        while (x > 0) {
+            int digit = x % 10;
+            sum += digit * digit;
+            x /= 10;
+        }
+
+        return sum;
     }
 };
 
@@ -129,10 +238,22 @@ public:
 class Solution {
 public:
     void rotate(vector<vector<int>>& matrix) {
+
         int n = matrix.size();
-        for (int i = 0; i < n; i++)
-            for (int j = i + 1; j < n; j++) swap(matrix[i][j], matrix[j][i]);  // transpose
-        for (auto& row : matrix) reverse(row.begin(), row.end());           // mirror each row
+
+        // transpose
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+                int temp = matrix[i][j];
+                matrix[i][j] = matrix[j][i];
+                matrix[j][i] = temp;
+            }
+        }
+
+        // reverse each row
+        for (int i = 0; i < n; i++) {
+            reverse(matrix[i].begin(), matrix[i].end());
+        }
     }
 };
 
@@ -140,22 +261,41 @@ public:
 class Solution {
 public:
     vector<int> spiralOrder(vector<vector<int>>& matrix) {
+
         vector<int> res;
-        int top = 0, bottom = matrix.size() - 1, left = 0, right = matrix[0].size() - 1;
+
+        int top = 0;
+        int bottom = matrix.size() - 1;
+        int left = 0;
+        int right = matrix[0].size() - 1;
+
         while (top <= bottom && left <= right) {
-            for (int c = left; c <= right; c++) res.push_back(matrix[top][c]);
+
+            for (int col = left; col <= right; col++) {
+                res.push_back(matrix[top][col]);
+            }
             top++;
-            for (int r = top; r <= bottom; r++) res.push_back(matrix[r][right]);
+
+            for (int row = top; row <= bottom; row++) {
+                res.push_back(matrix[row][right]);
+            }
             right--;
+
             if (top <= bottom) {
-                for (int c = right; c >= left; c--) res.push_back(matrix[bottom][c]);
+                for (int col = right; col >= left; col--) {
+                    res.push_back(matrix[bottom][col]);
+                }
                 bottom--;
             }
+
             if (left <= right) {
-                for (int r = bottom; r >= top; r--) res.push_back(matrix[r][left]);
+                for (int row = bottom; row >= top; row--) {
+                    res.push_back(matrix[row][left]);
+                }
                 left++;
             }
         }
+
         return res;
     }
 };
@@ -164,20 +304,54 @@ public:
 class Solution {
 public:
     void setZeroes(vector<vector<int>>& matrix) {
-        int rows = matrix.size(), cols = matrix[0].size();
-        bool firstRow = false, firstCol = false;
-        for (int c = 0; c < cols; c++) firstRow |= matrix[0][c] == 0;
-        for (int r = 0; r < rows; r++) firstCol |= matrix[r][0] == 0;
-        for (int r = 1; r < rows; r++)
-            for (int c = 1; c < cols; c++)
-                if (matrix[r][c] == 0) matrix[r][0] = matrix[0][c] = 0;  // markers
-        for (int r = 1; r < rows; r++)
-            for (int c = 1; c < cols; c++)
-                if (matrix[r][0] == 0 || matrix[0][c] == 0) matrix[r][c] = 0;
-        if (firstRow)
-            for (int c = 0; c < cols; c++) matrix[0][c] = 0;
-        if (firstCol)
-            for (int r = 0; r < rows; r++) matrix[r][0] = 0;
+
+        int rows = matrix.size();
+        int cols = matrix[0].size();
+
+        bool firstRowZero = false;
+        bool firstColZero = false;
+
+        for (int c = 0; c < cols; c++) {
+            if (matrix[0][c] == 0) {
+                firstRowZero = true;
+            }
+        }
+
+        for (int r = 0; r < rows; r++) {
+            if (matrix[r][0] == 0) {
+                firstColZero = true;
+            }
+        }
+
+        // use row 0 and column 0 as markers
+        for (int r = 1; r < rows; r++) {
+            for (int c = 1; c < cols; c++) {
+                if (matrix[r][c] == 0) {
+                    matrix[r][0] = 0;
+                    matrix[0][c] = 0;
+                }
+            }
+        }
+
+        for (int r = 1; r < rows; r++) {
+            for (int c = 1; c < cols; c++) {
+                if (matrix[r][0] == 0 || matrix[0][c] == 0) {
+                    matrix[r][c] = 0;
+                }
+            }
+        }
+
+        if (firstRowZero) {
+            for (int c = 0; c < cols; c++) {
+                matrix[0][c] = 0;
+            }
+        }
+
+        if (firstColZero) {
+            for (int r = 0; r < rows; r++) {
+                matrix[r][0] = 0;
+            }
+        }
     }
 };
 
@@ -185,8 +359,14 @@ public:
 class Solution {
 public:
     int singleNumber(vector<int>& nums) {
+
         int res = 0;
-        for (int x : nums) res ^= x;  // pairs cancel out
+
+        // pairs cancel out
+        for (int num : nums) {
+            res ^= num;
+        }
+
         return res;
     }
 };
@@ -195,12 +375,15 @@ public:
 class Solution {
 public:
     int hammingWeight(int n) {
-        int count = 0;
+
         unsigned int x = n;
-        while (x) {
-            x &= x - 1;  // clear the lowest set bit
+        int count = 0;
+
+        while (x != 0) {
+            x = x & (x - 1);  // clear the lowest set bit
             count++;
         }
+
         return count;
     }
 };
@@ -209,8 +392,13 @@ public:
 class Solution {
 public:
     vector<int> countBits(int n) {
+
         vector<int> bits(n + 1, 0);
-        for (int i = 1; i <= n; i++) bits[i] = bits[i >> 1] + (i & 1);
+
+        for (int i = 1; i <= n; i++) {
+            bits[i] = bits[i >> 1] + (i & 1);
+        }
+
         return bits;
     }
 };
@@ -219,11 +407,19 @@ public:
 class Solution {
 public:
     uint32_t reverseBits(uint32_t n) {
+
         uint32_t res = 0;
+
         for (int i = 0; i < 32; i++) {
-            res = (res << 1) | (n & 1);  // move n's lowest bit onto res
-            n >>= 1;
+
+            int lowestBit = n & 1;
+
+            res = res << 1;
+            res = res | lowestBit;
+
+            n = n >> 1;
         }
+
         return res;
     }
 };
@@ -232,8 +428,16 @@ public:
 class Solution {
 public:
     int missingNumber(vector<int>& nums) {
-        int res = nums.size();
-        for (int i = 0; i < (int)nums.size(); i++) res ^= i ^ nums[i];  // indices cancel values
+
+        int n = nums.size();
+        int res = n;
+
+        // every present number cancels with its index
+        for (int i = 0; i < n; i++) {
+            res ^= i;
+            res ^= nums[i];
+        }
+
         return res;
     }
 };

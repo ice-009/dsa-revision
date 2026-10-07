@@ -2,154 +2,261 @@
 
 // @@ 73
 class KthLargest {
-    private final int k;
-    private final PriorityQueue<Integer> heap = new PriorityQueue<>();  // min-heap of the k largest
+    private int k;
+    private PriorityQueue<Integer> minHeap = new PriorityQueue<>();  // holds the k largest values
 
     public KthLargest(int k, int[] nums) {
         this.k = k;
-        for (int x : nums) add(x);
+
+        for (int num : nums) {
+            add(num);
+        }
     }
 
     public int add(int val) {
-        heap.add(val);
-        if (heap.size() > k) heap.poll();
-        return heap.peek();
+        minHeap.add(val);
+
+        if (minHeap.size() > k) {
+            minHeap.poll();
+        }
+
+        return minHeap.peek();
     }
 }
 
 // @@ 74
 class Solution {
     public int lastStoneWeight(int[] stones) {
-        PriorityQueue<Integer> heap = new PriorityQueue<>(Collections.reverseOrder());  // max-heap
-        for (int s : stones) heap.add(s);
-        while (heap.size() > 1) {
-            int a = heap.poll(), b = heap.poll();
-            if (a != b) heap.add(a - b);
+
+        PriorityQueue<Integer> maxHeap = new PriorityQueue<>(Collections.reverseOrder());
+
+        for (int stone : stones) {
+            maxHeap.add(stone);
         }
-        return heap.isEmpty() ? 0 : heap.peek();
+
+        while (maxHeap.size() > 1) {
+
+            int first = maxHeap.poll();
+            int second = maxHeap.poll();
+
+            if (first != second) {
+                maxHeap.add(first - second);
+            }
+        }
+
+        if (maxHeap.isEmpty()) {
+            return 0;
+        }
+
+        return maxHeap.peek();
     }
 }
 
 // @@ 75
 class Solution {
     public int[][] kClosest(int[][] points, int k) {
-        // max-heap by distance², size k: the farthest is on top and gets dropped
-        PriorityQueue<int[]> heap = new PriorityQueue<>(
-            (a, b) -> (b[0] * b[0] + b[1] * b[1]) - (a[0] * a[0] + a[1] * a[1]));
-        for (int[] p : points) {
-            heap.add(p);
-            if (heap.size() > k) heap.poll();
+
+        // max-heap by distance²: the farthest point is on top
+        PriorityQueue<int[]> maxHeap = new PriorityQueue<>((a, b) -> Integer.compare(dist(b), dist(a)));
+
+        for (int[] point : points) {
+            maxHeap.add(point);
+
+            if (maxHeap.size() > k) {
+                maxHeap.poll();
+            }
         }
-        return heap.toArray(new int[0][]);
+
+        int[][] ans = new int[maxHeap.size()][];
+
+        for (int i = 0; i < ans.length; i++) {
+            ans[i] = maxHeap.poll();
+        }
+
+        return ans;
+    }
+
+    private int dist(int[] point) {
+        return point[0] * point[0] + point[1] * point[1];
     }
 }
 
 // @@ 76
 class Solution {
     public int findKthLargest(int[] nums, int k) {
-        PriorityQueue<Integer> heap = new PriorityQueue<>();  // min-heap of the k largest
-        for (int x : nums) {
-            heap.add(x);
-            if (heap.size() > k) heap.poll();
+
+        PriorityQueue<Integer> minHeap = new PriorityQueue<>();  // holds the k largest values
+
+        for (int num : nums) {
+            minHeap.add(num);
+
+            if (minHeap.size() > k) {
+                minHeap.poll();
+            }
         }
-        return heap.peek();
+
+        return minHeap.peek();
     }
 }
 
 // @@ 77
 class Solution {
     public int leastInterval(char[] tasks, int n) {
+
         int[] count = new int[26];
-        for (char t : tasks) count[t - 'A']++;
-        int maxF = Arrays.stream(count).max().getAsInt();
-        int nMax = 0;
-        for (int c : count)
-            if (c == maxF) nMax++;
-        return Math.max(tasks.length, (maxF - 1) * (n + 1) + nMax);
+
+        for (char task : tasks) {
+            count[task - 'A']++;
+        }
+
+        int maxFreq = 0;
+
+        for (int i = 0; i < 26; i++) {
+            maxFreq = Math.max(maxFreq, count[i]);
+        }
+
+        int maxCount = 0;
+
+        for (int i = 0; i < 26; i++) {
+            if (count[i] == maxFreq) {
+                maxCount++;
+            }
+        }
+
+        int frames = (maxFreq - 1) * (n + 1) + maxCount;
+
+        return Math.max(tasks.length, frames);
     }
 }
 
 // @@ 78
 class Twitter {
     private int time = 0;
-    private final Map<Integer, List<int[]>> tweets = new HashMap<>();  // user -> {time, tweetId}, oldest first
-    private final Map<Integer, Set<Integer>> follows = new HashMap<>();
+    private Map<Integer, List<int[]>> tweets = new HashMap<>();  // user -> {time, tweetId}, oldest first
+    private Map<Integer, Set<Integer>> follows = new HashMap<>();
 
     public Twitter() {}
 
     public void postTweet(int userId, int tweetId) {
-        tweets.computeIfAbsent(userId, u -> new ArrayList<>()).add(new int[]{time++, tweetId});
+        if (!tweets.containsKey(userId)) {
+            tweets.put(userId, new ArrayList<>());
+        }
+
+        tweets.get(userId).add(new int[]{time, tweetId});
+        time++;
     }
 
     public List<Integer> getNewsFeed(int userId) {
-        // max-heap by time of {time, tweetId, user, index}
-        PriorityQueue<int[]> heap = new PriorityQueue<>((a, b) -> b[0] - a[0]);
-        Set<Integer> users = new HashSet<>(follows.getOrDefault(userId, Set.of()));
+
+        // each entry: {time, tweetId, user, index}, newest on top
+        PriorityQueue<int[]> maxHeap = new PriorityQueue<>((a, b) -> b[0] - a[0]);
+
+        List<Integer> users = new ArrayList<>();
         users.add(userId);
-        for (int u : users) {
-            List<int[]> t = tweets.get(u);
-            if (t != null && !t.isEmpty()) {
-                int[] last = t.get(t.size() - 1);
-                heap.add(new int[]{last[0], last[1], u, t.size() - 1});
+
+        if (follows.containsKey(userId)) {
+            users.addAll(follows.get(userId));
+        }
+
+        for (int user : users) {
+            List<int[]> list = tweets.get(user);
+
+            if (list != null && !list.isEmpty()) {
+                int index = list.size() - 1;
+                int[] latest = list.get(index);
+                maxHeap.add(new int[]{latest[0], latest[1], user, index});
             }
         }
+
         List<Integer> feed = new ArrayList<>();
-        while (!heap.isEmpty() && feed.size() < 10) {
-            int[] top = heap.poll();
-            feed.add(top[1]);
-            int i = top[3];
-            if (i > 0) {
-                int[] older = tweets.get(top[2]).get(i - 1);
-                heap.add(new int[]{older[0], older[1], top[2], i - 1});
+
+        while (!maxHeap.isEmpty() && feed.size() < 10) {
+
+            int[] top = maxHeap.poll();
+
+            int tweetId = top[1];
+            int user = top[2];
+            int index = top[3];
+
+            feed.add(tweetId);
+
+            if (index > 0) {
+                int[] older = tweets.get(user).get(index - 1);
+                maxHeap.add(new int[]{older[0], older[1], user, index - 1});
             }
         }
+
         return feed;
     }
 
     public void follow(int followerId, int followeeId) {
-        if (followerId != followeeId) follows.computeIfAbsent(followerId, u -> new HashSet<>()).add(followeeId);
+        if (followerId == followeeId) {
+            return;
+        }
+
+        if (!follows.containsKey(followerId)) {
+            follows.put(followerId, new HashSet<>());
+        }
+
+        follows.get(followerId).add(followeeId);
     }
 
     public void unfollow(int followerId, int followeeId) {
-        Set<Integer> s = follows.get(followerId);
-        if (s != null) s.remove(followeeId);
+        if (follows.containsKey(followerId)) {
+            follows.get(followerId).remove(followeeId);
+        }
     }
 }
 
 // @@ 79
 class MedianFinder {
-    private final PriorityQueue<Integer> low = new PriorityQueue<>(Collections.reverseOrder());  // smaller half
-    private final PriorityQueue<Integer> high = new PriorityQueue<>();                          // larger half
+    private PriorityQueue<Integer> low = new PriorityQueue<>(Collections.reverseOrder());  // max-heap: smaller half
+    private PriorityQueue<Integer> high = new PriorityQueue<>();                          // min-heap: larger half
 
     public MedianFinder() {}
 
     public void addNum(int num) {
+
         low.add(num);
-        high.add(low.poll());  // keep every low <= every high
-        if (high.size() > low.size()) low.add(high.poll());  // low may hold one extra
+
+        // move the biggest of low into high, so every low <= every high
+        high.add(low.poll());
+
+        // low may hold one extra, never high
+        if (high.size() > low.size()) {
+            low.add(high.poll());
+        }
     }
 
     public double findMedian() {
-        if (low.size() > high.size()) return low.peek();
+        if (low.size() > high.size()) {
+            return low.peek();
+        }
+
         return (low.peek() + (double) high.peek()) / 2.0;
     }
 }
 
 // @@ 81
 class Solution {
-    private final List<List<Integer>> res = new ArrayList<>();
-    private final List<Integer> path = new ArrayList<>();
+    private List<List<Integer>> res = new ArrayList<>();
+    private List<Integer> path = new ArrayList<>();
 
     public List<List<Integer>> subsets(int[] nums) {
-        bt(nums, 0);
+        backtrack(nums, 0);
         return res;
     }
 
-    private void bt(int[] nums, int start) {
+    private void backtrack(int[] nums, int start) {
+
         res.add(new ArrayList<>(path));  // every node is a subset
+
         for (int i = start; i < nums.length; i++) {
+
             path.add(nums[i]);
-            bt(nums, i + 1);
+
+            backtrack(nums, i + 1);
+
             path.remove(path.size() - 1);
         }
     }
@@ -157,24 +264,33 @@ class Solution {
 
 // @@ 82
 class Solution {
-    private final List<List<Integer>> res = new ArrayList<>();
-    private final List<Integer> path = new ArrayList<>();
+    private List<List<Integer>> res = new ArrayList<>();
+    private List<Integer> path = new ArrayList<>();
 
     public List<List<Integer>> combinationSum(int[] candidates, int target) {
         Arrays.sort(candidates);
-        bt(candidates, 0, target);
+        backtrack(candidates, 0, target);
         return res;
     }
 
-    private void bt(int[] cand, int start, int remaining) {
+    private void backtrack(int[] candidates, int start, int remaining) {
+
         if (remaining == 0) {
             res.add(new ArrayList<>(path));
             return;
         }
-        for (int i = start; i < cand.length; i++) {
-            if (cand[i] > remaining) break;  // sorted, so nothing later fits either
-            path.add(cand[i]);
-            bt(cand, i, remaining - cand[i]);  // i, not i + 1: reuse allowed
+
+        for (int i = start; i < candidates.length; i++) {
+
+            // sorted, so nothing after this fits either
+            if (candidates[i] > remaining) {
+                break;
+            }
+
+            path.add(candidates[i]);
+
+            backtrack(candidates, i, remaining - candidates[i]);  // i, not i + 1: reuse allowed
+
             path.remove(path.size() - 1);
         }
     }
@@ -182,26 +298,34 @@ class Solution {
 
 // @@ 83
 class Solution {
-    private final List<List<Integer>> res = new ArrayList<>();
-    private final List<Integer> path = new ArrayList<>();
+    private List<List<Integer>> res = new ArrayList<>();
+    private List<Integer> path = new ArrayList<>();
     private boolean[] used;
 
     public List<List<Integer>> permute(int[] nums) {
         used = new boolean[nums.length];
-        bt(nums);
+        backtrack(nums);
         return res;
     }
 
-    private void bt(int[] nums) {
+    private void backtrack(int[] nums) {
+
         if (path.size() == nums.length) {
             res.add(new ArrayList<>(path));
             return;
         }
+
         for (int i = 0; i < nums.length; i++) {
-            if (used[i]) continue;
+
+            if (used[i]) {
+                continue;
+            }
+
             used[i] = true;
             path.add(nums[i]);
-            bt(nums);
+
+            backtrack(nums);
+
             path.remove(path.size() - 1);
             used[i] = false;
         }
@@ -210,21 +334,30 @@ class Solution {
 
 // @@ 84
 class Solution {
-    private final List<List<Integer>> res = new ArrayList<>();
-    private final List<Integer> path = new ArrayList<>();
+    private List<List<Integer>> res = new ArrayList<>();
+    private List<Integer> path = new ArrayList<>();
 
     public List<List<Integer>> subsetsWithDup(int[] nums) {
         Arrays.sort(nums);
-        bt(nums, 0);
+        backtrack(nums, 0);
         return res;
     }
 
-    private void bt(int[] nums, int start) {
+    private void backtrack(int[] nums, int start) {
+
         res.add(new ArrayList<>(path));
+
         for (int i = start; i < nums.length; i++) {
-            if (i > start && nums[i] == nums[i - 1]) continue;  // same value at the same depth
+
+            // skip the same value at the same depth
+            if (i > start && nums[i] == nums[i - 1]) {
+                continue;
+            }
+
             path.add(nums[i]);
-            bt(nums, i + 1);
+
+            backtrack(nums, i + 1);
+
             path.remove(path.size() - 1);
         }
     }
@@ -233,81 +366,139 @@ class Solution {
 // @@ 85
 class Solution {
     public boolean exist(char[][] board, String word) {
-        for (int r = 0; r < board.length; r++)
-            for (int c = 0; c < board[0].length; c++)
-                if (dfs(board, word, r, c, 0)) return true;
+
+        for (int r = 0; r < board.length; r++) {
+            for (int c = 0; c < board[0].length; c++) {
+                if (dfs(board, word, r, c, 0)) {
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
     private boolean dfs(char[][] board, String word, int r, int c, int i) {
-        if (i == word.length()) return true;
-        if (r < 0 || c < 0 || r >= board.length || c >= board[0].length || board[r][c] != word.charAt(i))
+
+        if (i == word.length()) {
+            return true;
+        }
+
+        if (r < 0 || c < 0 || r >= board.length || c >= board[0].length) {
             return false;
+        }
+
+        if (board[r][c] != word.charAt(i)) {
+            return false;
+        }
+
         board[r][c] = '#';  // mark visited
-        boolean found = dfs(board, word, r + 1, c, i + 1) || dfs(board, word, r - 1, c, i + 1)
-                || dfs(board, word, r, c + 1, i + 1) || dfs(board, word, r, c - 1, i + 1);
+
+        boolean found = dfs(board, word, r + 1, c, i + 1)
+                     || dfs(board, word, r - 1, c, i + 1)
+                     || dfs(board, word, r, c + 1, i + 1)
+                     || dfs(board, word, r, c - 1, i + 1);
+
         board[r][c] = word.charAt(i);  // restore
+
         return found;
     }
 }
 
 // @@ 86
 class Solution {
-    private final List<List<String>> res = new ArrayList<>();
-    private final List<String> path = new ArrayList<>();
+    private List<List<String>> res = new ArrayList<>();
+    private List<String> path = new ArrayList<>();
 
     public List<List<String>> partition(String s) {
-        bt(s, 0);
+        backtrack(s, 0);
         return res;
     }
 
-    private void bt(String s, int start) {
+    private void backtrack(String s, int start) {
+
         if (start == s.length()) {
             res.add(new ArrayList<>(path));
             return;
         }
+
         for (int end = start; end < s.length(); end++) {
-            if (!isPal(s, start, end)) continue;
+
+            if (!isPalindrome(s, start, end)) {
+                continue;
+            }
+
             path.add(s.substring(start, end + 1));
-            bt(s, end + 1);
+
+            backtrack(s, end + 1);
+
             path.remove(path.size() - 1);
         }
     }
 
-    private boolean isPal(String s, int l, int r) {
-        while (l < r)
-            if (s.charAt(l++) != s.charAt(r--)) return false;
+    private boolean isPalindrome(String s, int left, int right) {
+        while (left < right) {
+            if (s.charAt(left) != s.charAt(right)) {
+                return false;
+            }
+
+            left++;
+            right--;
+        }
+
         return true;
     }
 }
 
 // @@ 87
 class Solution {
-    private final List<List<String>> res = new ArrayList<>();
-    private final Set<Integer> cols = new HashSet<>(), diag = new HashSet<>(), anti = new HashSet<>();
+    private List<List<String>> res = new ArrayList<>();
+    private Set<Integer> cols = new HashSet<>();
+    private Set<Integer> diag = new HashSet<>();  // r - c
+    private Set<Integer> anti = new HashSet<>();  // r + c
     private char[][] board;
 
     public List<List<String>> solveNQueens(int n) {
         board = new char[n][n];
-        for (char[] row : board) Arrays.fill(row, '.');
-        bt(0, n);
+
+        for (char[] row : board) {
+            Arrays.fill(row, '.');
+        }
+
+        backtrack(0, n);
         return res;
     }
 
-    private void bt(int r, int n) {
+    private void backtrack(int r, int n) {
+
         if (r == n) {
             List<String> rows = new ArrayList<>();
-            for (char[] row : board) rows.add(new String(row));
+
+            for (char[] row : board) {
+                rows.add(new String(row));
+            }
+
             res.add(rows);
             return;
         }
+
         for (int c = 0; c < n; c++) {
-            if (cols.contains(c) || diag.contains(r - c) || anti.contains(r + c)) continue;
-            cols.add(c); diag.add(r - c); anti.add(r + c);
+
+            if (cols.contains(c) || diag.contains(r - c) || anti.contains(r + c)) {
+                continue;
+            }
+
+            cols.add(c);
+            diag.add(r - c);
+            anti.add(r + c);
             board[r][c] = 'Q';
-            bt(r + 1, n);
+
+            backtrack(r + 1, n);
+
             board[r][c] = '.';
-            cols.remove(c); diag.remove(r - c); anti.remove(r + c);
+            cols.remove(c);
+            diag.remove(r - c);
+            anti.remove(r + c);
         }
     }
 }

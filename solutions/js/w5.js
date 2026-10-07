@@ -4,56 +4,119 @@
 class KthLargest {
   constructor(k, nums) {
     this.k = k;
-    this.heap = new Heap((a, b) => a < b); // min-heap of the k largest
-    for (const x of nums) this.add(x);
+    this.minHeap = new Heap((a, b) => a < b); // holds the k largest values
+
+    for (const num of nums) {
+      this.add(num);
+    }
   }
 
   add(val) {
-    this.heap.push(val);
-    if (this.heap.size > this.k) this.heap.pop();
-    return this.heap.peek();
+    this.minHeap.push(val);
+
+    if (this.minHeap.size > this.k) {
+      this.minHeap.pop();
+    }
+
+    return this.minHeap.peek();
   }
 }
 
 // @@ 74
 function lastStoneWeight(stones) {
-  const heap = new Heap((a, b) => a > b); // max-heap
-  for (const s of stones) heap.push(s);
-  while (heap.size > 1) {
-    const a = heap.pop(), b = heap.pop();
-    if (a !== b) heap.push(a - b);
+
+  const maxHeap = new Heap((a, b) => a > b);
+
+  for (const stone of stones) {
+    maxHeap.push(stone);
   }
-  return heap.size ? heap.peek() : 0;
+
+  while (maxHeap.size > 1) {
+
+    const first = maxHeap.pop();
+    const second = maxHeap.pop();
+
+    if (first !== second) {
+      maxHeap.push(first - second);
+    }
+  }
+
+  if (maxHeap.size === 0) {
+    return 0;
+  }
+
+  return maxHeap.peek();
 }
 
 // @@ 75
 function kClosest(points, k) {
-  const dist = ([x, y]) => x * x + y * y;
-  const heap = new Heap((a, b) => dist(a) > dist(b)); // max-heap by distance², size k
-  for (const p of points) {
-    heap.push(p);
-    if (heap.size > k) heap.pop(); // drop the farthest
+
+  function dist(point) {
+    return point[0] * point[0] + point[1] * point[1];
   }
-  return heap.a;
+
+  // max-heap by distance²: the farthest point is on top
+  const maxHeap = new Heap((a, b) => dist(a) > dist(b));
+
+  for (const point of points) {
+    maxHeap.push(point);
+
+    if (maxHeap.size > k) {
+      maxHeap.pop();
+    }
+  }
+
+  const ans = [];
+
+  while (maxHeap.size > 0) {
+    ans.push(maxHeap.pop());
+  }
+
+  return ans;
 }
 
 // @@ 76
 function findKthLargest(nums, k) {
-  const heap = new Heap((a, b) => a < b); // min-heap of the k largest
-  for (const x of nums) {
-    heap.push(x);
-    if (heap.size > k) heap.pop();
+
+  const minHeap = new Heap((a, b) => a < b); // holds the k largest values
+
+  for (const num of nums) {
+    minHeap.push(num);
+
+    if (minHeap.size > k) {
+      minHeap.pop();
+    }
   }
-  return heap.peek();
+
+  return minHeap.peek();
 }
 
 // @@ 77
 function leastInterval(tasks, n) {
+
   const count = new Array(26).fill(0);
-  for (const t of tasks) count[t.charCodeAt(0) - 65]++;
-  const maxF = Math.max(...count);
-  const nMax = count.filter(c => c === maxF).length;
-  return Math.max(tasks.length, (maxF - 1) * (n + 1) + nMax);
+
+  for (const task of tasks) {
+    count[task.charCodeAt(0) - 65]++;
+  }
+
+  let maxFreq = 0;
+
+  for (let i = 0; i < 26; i++) {
+    maxFreq = Math.max(maxFreq, count[i]);
+  }
+
+  let maxCount = 0;
+
+  for (let i = 0; i < 26; i++) {
+    if (count[i] === maxFreq) {
+      maxCount++;
+    }
+  }
+
+  const frames = (maxFreq - 1) * (n + 1) + maxCount;
+
+  return Math.max(tasks.length, frames);
 }
 
 // @@ 78
@@ -65,36 +128,73 @@ class Twitter {
   }
 
   postTweet(userId, tweetId) {
-    if (!this.tweets.has(userId)) this.tweets.set(userId, []);
-    this.tweets.get(userId).push([this.time++, tweetId]);
+    if (!this.tweets.has(userId)) {
+      this.tweets.set(userId, []);
+    }
+
+    this.tweets.get(userId).push([this.time, tweetId]);
+    this.time++;
   }
 
   getNewsFeed(userId) {
-    const heap = new Heap((a, b) => a[0] > b[0]); // newest first: [time, tweetId, user, index]
-    const users = new Set(this.follows.get(userId) || []);
-    users.add(userId);
-    for (const u of users) {
-      const t = this.tweets.get(u);
-      if (t && t.length) heap.push([...t[t.length - 1], u, t.length - 1]);
+
+    // each entry: [time, tweetId, user, index], newest on top
+    const maxHeap = new Heap((a, b) => a[0] > b[0]);
+
+    const users = [userId];
+
+    if (this.follows.has(userId)) {
+      for (const followee of this.follows.get(userId)) {
+        users.push(followee);
+      }
     }
+
+    for (const user of users) {
+      const list = this.tweets.get(user);
+
+      if (list && list.length > 0) {
+        const index = list.length - 1;
+        maxHeap.push([list[index][0], list[index][1], user, index]);
+      }
+    }
+
     const feed = [];
-    while (heap.size && feed.length < 10) {
-      const [, id, u, i] = heap.pop();
-      feed.push(id);
-      if (i > 0) heap.push([...this.tweets.get(u)[i - 1], u, i - 1]);
+
+    while (maxHeap.size > 0 && feed.length < 10) {
+
+      const top = maxHeap.pop();
+
+      const tweetId = top[1];
+      const user = top[2];
+      const index = top[3];
+
+      feed.push(tweetId);
+
+      if (index > 0) {
+        const older = this.tweets.get(user)[index - 1];
+        maxHeap.push([older[0], older[1], user, index - 1]);
+      }
     }
+
     return feed;
   }
 
   follow(followerId, followeeId) {
-    if (followerId === followeeId) return;
-    if (!this.follows.has(followerId)) this.follows.set(followerId, new Set());
+    if (followerId === followeeId) {
+      return;
+    }
+
+    if (!this.follows.has(followerId)) {
+      this.follows.set(followerId, new Set());
+    }
+
     this.follows.get(followerId).add(followeeId);
   }
 
   unfollow(followerId, followeeId) {
-    const s = this.follows.get(followerId);
-    if (s) s.delete(followeeId);
+    if (this.follows.has(followerId)) {
+      this.follows.get(followerId).delete(followeeId);
+    }
   }
 }
 
@@ -106,150 +206,284 @@ class MedianFinder {
   }
 
   addNum(num) {
+
     this.low.push(num);
-    this.high.push(this.low.pop()); // keep every low <= every high
-    if (this.high.size > this.low.size) this.low.push(this.high.pop()); // low may hold one extra
+
+    // move the biggest of low into high, so every low <= every high
+    this.high.push(this.low.pop());
+
+    // low may hold one extra, never high
+    if (this.high.size > this.low.size) {
+      this.low.push(this.high.pop());
+    }
   }
 
   findMedian() {
-    if (this.low.size > this.high.size) return this.low.peek();
+    if (this.low.size > this.high.size) {
+      return this.low.peek();
+    }
+
     return (this.low.peek() + this.high.peek()) / 2;
   }
 }
 
 // @@ 81
 function subsets(nums) {
-  const res = [], path = [];
-  const bt = start => {
+
+  const res = [];
+  const path = [];
+
+  function backtrack(start) {
+
     res.push([...path]); // every node is a subset
+
     for (let i = start; i < nums.length; i++) {
+
       path.push(nums[i]);
-      bt(i + 1);
+
+      backtrack(i + 1);
+
       path.pop();
     }
-  };
-  bt(0);
+  }
+
+  backtrack(0);
   return res;
 }
 
 // @@ 82
 function combinationSum(candidates, target) {
+
   candidates.sort((a, b) => a - b);
-  const res = [], path = [];
-  const bt = (start, remaining) => {
+
+  const res = [];
+  const path = [];
+
+  function backtrack(start, remaining) {
+
     if (remaining === 0) {
       res.push([...path]);
       return;
     }
+
     for (let i = start; i < candidates.length; i++) {
-      if (candidates[i] > remaining) break; // sorted, so nothing later fits either
+
+      // sorted, so nothing after this fits either
+      if (candidates[i] > remaining) {
+        break;
+      }
+
       path.push(candidates[i]);
-      bt(i, remaining - candidates[i]); // i, not i + 1: reuse allowed
+
+      backtrack(i, remaining - candidates[i]); // i, not i + 1: reuse allowed
+
       path.pop();
     }
-  };
-  bt(0, target);
+  }
+
+  backtrack(0, target);
   return res;
 }
 
 // @@ 83
 function permute(nums) {
-  const res = [], path = [];
+
+  const res = [];
+  const path = [];
   const used = new Array(nums.length).fill(false);
-  const bt = () => {
+
+  function backtrack() {
+
     if (path.length === nums.length) {
       res.push([...path]);
       return;
     }
+
     for (let i = 0; i < nums.length; i++) {
-      if (used[i]) continue;
+
+      if (used[i]) {
+        continue;
+      }
+
       used[i] = true;
       path.push(nums[i]);
-      bt();
+
+      backtrack();
+
       path.pop();
       used[i] = false;
     }
-  };
-  bt();
+  }
+
+  backtrack();
   return res;
 }
 
 // @@ 84
 function subsetsWithDup(nums) {
+
   nums.sort((a, b) => a - b);
-  const res = [], path = [];
-  const bt = start => {
+
+  const res = [];
+  const path = [];
+
+  function backtrack(start) {
+
     res.push([...path]);
+
     for (let i = start; i < nums.length; i++) {
-      if (i > start && nums[i] === nums[i - 1]) continue; // same value at the same depth
+
+      // skip the same value at the same depth
+      if (i > start && nums[i] === nums[i - 1]) {
+        continue;
+      }
+
       path.push(nums[i]);
-      bt(i + 1);
+
+      backtrack(i + 1);
+
       path.pop();
     }
-  };
-  bt(0);
+  }
+
+  backtrack(0);
   return res;
 }
 
 // @@ 85
 function exist(board, word) {
-  const rows = board.length, cols = board[0].length;
-  const dfs = (r, c, i) => {
-    if (i === word.length) return true;
-    if (r < 0 || c < 0 || r >= rows || c >= cols || board[r][c] !== word[i]) return false;
+
+  const rows = board.length;
+  const cols = board[0].length;
+
+  function dfs(r, c, i) {
+
+    if (i === word.length) {
+      return true;
+    }
+
+    if (r < 0 || c < 0 || r >= rows || c >= cols) {
+      return false;
+    }
+
+    if (board[r][c] !== word[i]) {
+      return false;
+    }
+
     board[r][c] = '#'; // mark visited
-    const found = dfs(r + 1, c, i + 1) || dfs(r - 1, c, i + 1) || dfs(r, c + 1, i + 1) || dfs(r, c - 1, i + 1);
+
+    const found = dfs(r + 1, c, i + 1)
+               || dfs(r - 1, c, i + 1)
+               || dfs(r, c + 1, i + 1)
+               || dfs(r, c - 1, i + 1);
+
     board[r][c] = word[i]; // restore
+
     return found;
-  };
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++)
-      if (dfs(r, c, 0)) return true;
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (dfs(r, c, 0)) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
 // @@ 86
 function partition(s) {
-  const res = [], path = [];
-  const isPal = (l, r) => {
-    while (l < r) if (s[l++] !== s[r--]) return false;
+
+  const res = [];
+  const path = [];
+
+  function isPalindrome(left, right) {
+    while (left < right) {
+      if (s[left] !== s[right]) {
+        return false;
+      }
+
+      left++;
+      right--;
+    }
+
     return true;
-  };
-  const bt = start => {
+  }
+
+  function backtrack(start) {
+
     if (start === s.length) {
       res.push([...path]);
       return;
     }
+
     for (let end = start; end < s.length; end++) {
-      if (!isPal(start, end)) continue;
+
+      if (!isPalindrome(start, end)) {
+        continue;
+      }
+
       path.push(s.slice(start, end + 1));
-      bt(end + 1);
+
+      backtrack(end + 1);
+
       path.pop();
     }
-  };
-  bt(0);
+  }
+
+  backtrack(0);
   return res;
 }
 
 // @@ 87
 function solveNQueens(n) {
+
   const res = [];
-  const board = Array.from({ length: n }, () => new Array(n).fill('.'));
-  const cols = new Set(), diag = new Set(), anti = new Set(); // diag = r - c, anti = r + c
-  const bt = r => {
+  const cols = new Set();
+  const diag = new Set(); // r - c
+  const anti = new Set(); // r + c
+
+  const board = [];
+
+  for (let i = 0; i < n; i++) {
+    board.push(new Array(n).fill('.'));
+  }
+
+  function backtrack(r) {
+
     if (r === n) {
-      res.push(board.map(row => row.join('')));
+      const rows = [];
+
+      for (const row of board) {
+        rows.push(row.join(''));
+      }
+
+      res.push(rows);
       return;
     }
+
     for (let c = 0; c < n; c++) {
-      if (cols.has(c) || diag.has(r - c) || anti.has(r + c)) continue;
-      cols.add(c); diag.add(r - c); anti.add(r + c);
+
+      if (cols.has(c) || diag.has(r - c) || anti.has(r + c)) {
+        continue;
+      }
+
+      cols.add(c);
+      diag.add(r - c);
+      anti.add(r + c);
       board[r][c] = 'Q';
-      bt(r + 1);
+
+      backtrack(r + 1);
+
       board[r][c] = '.';
-      cols.delete(c); diag.delete(r - c); anti.delete(r + c);
+      cols.delete(c);
+      diag.delete(r - c);
+      anti.delete(r + c);
     }
-  };
-  bt(0);
+  }
+
+  backtrack(0);
   return res;
 }
