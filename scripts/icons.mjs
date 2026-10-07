@@ -25,15 +25,17 @@ const segDist = (px, py, [ax, ay], [bx, by]) => {
 };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 
-function render(size) {
+// scale < 1 shrinks the artwork toward the centre (maskable icons keep content inside the 80% safe zone)
+function render(size, scale = 1) {
   const raw = Buffer.alloc(size * (size * 3 + 1));
-  const aa = 1.2 / size;
+  const aa = 1.2 / size / scale;
   const cover = d => Math.max(0, Math.min(1, 0.5 - d / aa));
   for (let y = 0; y < size; y++) {
     raw[y * (size * 3 + 1)] = 0;
     for (let x = 0; x < size; x++) {
-      const u = (x + 0.5) / size, v = (y + 0.5) / size;
-      let c = mix([58, 104, 245], [28, 52, 170], (u + v) / 2);
+      const gu = (x + 0.5) / size, gv = (y + 0.5) / size;
+      const u = 0.5 + (gu - 0.5) / scale, v = 0.5 + (gv - 0.5) / scale;
+      let c = mix([58, 104, 245], [28, 52, 170], (gu + gv) / 2);
       for (const [a, b] of edges) c = mix(c, [255, 255, 255], 0.9 * cover(segDist(u, v, nodes[a], nodes[b]) - 0.022));
       nodes.forEach(([nx, ny], i) => {
         const d = Math.hypot(u - nx, v - ny);
@@ -52,7 +54,7 @@ function render(size) {
   ]);
 }
 
-for (const [name, size] of [['icon-192', 192], ['icon-512', 512], ['apple-touch-icon', 180]]) {
-  fs.writeFileSync(new URL(`../icons/${name}.png`, import.meta.url), render(size));
+for (const [name, size, scale] of [['icon-192', 192], ['icon-512', 512], ['apple-touch-icon', 180], ['maskable-192', 192, 0.72], ['maskable-512', 512, 0.72]]) {
+  fs.writeFileSync(new URL(`../icons/${name}.png`, import.meta.url), render(size, scale));
 }
 console.log('icons written');

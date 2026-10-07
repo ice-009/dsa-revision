@@ -342,6 +342,27 @@
     return `<p class="small weak-line">Recognition to work on: ${fams.map(f => `<b>${esc(FAMILY[f])}</b> ${Math.round(S.quiz[f][0] / S.quiz[f][1] * 100)}%`).join(' · ')}</p>`;
   }
 
+  // ── Install (PWA) ────────────────────────────────────────────
+  // Chrome/Edge (Android + desktop) fire beforeinstallprompt; iOS/iPadOS Safari never does.
+  let installPrompt = null;
+  const isStandalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const IS_ANDROID = /Android/i.test(navigator.userAgent);
+  const INSTALL_BTN = '<button type="button" class="btn small primary" data-act="install">Install app</button>';
+  function installHint() {
+    if (installPrompt) return 'One tap installs it: opens full screen and works offline.';
+    if (IS_IOS) return 'In <b>Safari</b>, tap <b>Share</b> → <b>Add to Home Screen</b>. It then opens full screen and works offline.';
+    if (IS_ANDROID) return 'In <b>Chrome</b>, open the menu <b>⋮</b> → <b>Install app</b> (or <b>Add to Home screen</b>). It then opens full screen and works offline.';
+    return 'On iPhone/iPad: Safari <b>Share</b> → <b>Add to Home Screen</b>. On Android: Chrome menu <b>⋮</b> → <b>Install app</b>. On desktop Chrome/Edge: the install icon in the address bar.';
+  }
+  function refreshInstallUI() {
+    const page = (location.hash.replace(/^#\/?/, '') || 'today').split('/')[0];
+    if (page === 'today') renderToday();
+    else if (page === 'more') renderMore();
+  }
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; refreshInstallUI(); });
+  window.addEventListener('appinstalled', () => { installPrompt = null; toast('App installed'); refreshInstallUI(); });
+
   function renderToday() {
     const t = today();
     const wk = currentWeek();
@@ -353,13 +374,13 @@
     const weekProblems = PROBLEMS.filter(p => p.week === wk);
     const weekDone = weekProblems.filter(p => S.status[p.n] === 'solved').length;
     const revisit = PROBLEMS.filter(p => S.status[p.n] === 'revisit');
-    const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+    const standalone = isStandalone();
     const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 
     view.innerHTML = `
       ${!standalone && !S.hideInstall ? `<div class="card banner">
-        <div style="flex:1"><b>Install on your iPad:</b> tap <b>Share</b> → <b>Add to Home Screen</b>. It then opens full screen and works offline.</div>
-        <button type="button" class="btn small ghost" data-act="hide-install">Dismiss</button></div>` : ''}
+        <div style="flex:1"><b>Install DSA Revise:</b> ${installHint()}</div>
+        <div class="row" style="gap:8px">${installPrompt ? INSTALL_BTN : ''}<button type="button" class="btn small ghost" data-act="hide-install">Dismiss</button></div></div>` : ''}
       <div class="eyebrow">${esc(dateLabel)}</div>
       <h1>Week ${wk} of ${WEEKS}</h1>
       <p class="sub">${esc(WEEK_DATES[wk] || '')} · ${weekTopics.map(tp => esc(tp.name)).join(' · ')}</p>
@@ -1087,7 +1108,7 @@
           <div class="segmented">${[0.85, 0.9, 0.95].map(v => `<button type="button" class="${S.retention === v ? 'on' : ''}" data-act="retention" data-v="${v}">${Math.round(v * 100)}%</button>`).join('')}</div></div>
         <div class="setting"><div><b>Code language</b><p>Used for every solution and pattern template.</p></div>
           ${langTabs()}</div>
-        <div class="setting"><div><b>Appearance</b><p>Follows the iPad setting by default.</p></div>
+        <div class="setting"><div><b>Appearance</b><p>Follows the device setting by default.</p></div>
           <div class="segmented">${['auto', 'light', 'dark'].map(v => `<button type="button" class="${S.theme === v ? 'on' : ''}" data-act="theme" data-v="${v}">${v[0].toUpperCase() + v.slice(1)}</button>`).join('')}</div></div>
         <div class="setting"><div><b>Backup</b><p>Progress lives on this device only. Export a JSON backup now and then.</p></div>
           <div class="row"><button type="button" class="btn small" data-act="export">Export</button>
@@ -1103,13 +1124,20 @@
         <div class="card stat"><b>${PROBLEMS.filter(p => (S.srs[p.n]?.s || 0) >= 21).length}</b><span>long-term (stability 3w+)</span></div>
       </div>
 
-      <h2>Install on iPad</h2>
-      <div class="card">
-        <ol style="margin:0;padding-left:20px">
-          <li>Open this page in <b>Safari</b>.</li>
-          <li>Tap the <b>Share</b> button → <b>Add to Home Screen</b> → <b>Add</b>.</li>
-          <li>Launch it once while online, then it works fully offline.</li>
-        </ol>
+      <h2>Get the app</h2>
+      <div class="card get-app">
+        <div class="setting"><div><b>${isStandalone() ? '✓ Installed' : 'Install from the browser'}</b>
+          <p>${isStandalone() ? 'You’re using the installed app.' : installHint()}</p></div>
+          ${!isStandalone() && installPrompt ? INSTALL_BTN : ''}</div>
+        <div class="setting"><div><b>Android app (APK)</b>
+          <p>Allow <b>Install unknown apps</b> for Chrome the first time.</p></div>
+          <a class="btn small primary" href="./downloads/dsa-revise.apk" download="dsa-revise.apk" data-apk>Download for Android (APK)</a></div>
+        <div class="setting"><div><b>iPhone / iPad</b>
+          <ol style="margin:6px 0 0;padding-left:20px;font-size:14px;color:var(--ink-2)">
+            <li>Open this page in <b>Safari</b>.</li>
+            <li>Tap the <b>Share</b> button → <b>Add to Home Screen</b> → <b>Add</b>.</li>
+            <li>Launch it once while online, then it works fully offline.</li>
+          </ol></div></div>
         <p class="small muted" style="margin:12px 0 0" id="offline-status">Checking offline cache…</p>
       </div>
       <p class="small muted" style="margin-top:24px">Content: ${PROBLEMS.length} problems from switch_prep_tracker.xlsx (DSA sheet), ${TOPICS.length} patterns. Every problem has an algorithm, a dry run and code in C++, Java and JavaScript; every solution in every language passed its example and edge-case tests before publishing.</p>`;
@@ -1258,6 +1286,16 @@
       case 'newper': S.newPerDay = Number(v); save(); renderMore(); break;
       case 'theme': S.theme = v; save(); applyTheme(); renderMore(); break;
       case 'hide-install': S.hideInstall = true; save(); renderToday(); break;
+      case 'install': {
+        const p = installPrompt;
+        installPrompt = null;
+        refreshInstallUI();
+        if (p) {
+          p.prompt();
+          p.userChoice.then(c => { if (c && c.outcome === 'accepted') toast('Installing…'); }).catch(() => {});
+        }
+        break;
+      }
       case 'export': exportBackup(); break;
       case 'reset':
         if (confirm('Reset all progress on this device? Export a backup first if you might want it back.')) {
@@ -1317,6 +1355,13 @@
   async function exportBackup() {
     const ink = window.Ink ? await Ink.exportAll() : [];
     const blob = new Blob([JSON.stringify({ ...S, ink }, null, 1)], { type: 'application/json' });
+    if (window.DSAReviseAndroid) {
+      // inside the Android app: hand the file to the native "save as" picker
+      const reader = new FileReader();
+      reader.onload = () => window.DSAReviseAndroid.save(reader.result, 'application/json');
+      reader.readAsDataURL(blob);
+      return;
+    }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `dsa-revise-backup-${today()}.json`;
