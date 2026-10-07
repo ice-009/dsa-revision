@@ -67,9 +67,10 @@ main {
 }
 .nav a {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 4px 10px; min-width: 64px; border-radius: 10px;
+  flex: 1 1 0; min-width: 0; max-width: 88px; padding: 4px 2px; border-radius: 10px;
   color: var(--ink-3); font-size: 11px; font-weight: 600;
 }
+.nav a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav a.active { color: var(--accent); }
 .brand, .nav-foot { display: none; }
 
@@ -79,7 +80,7 @@ main {
     padding: calc(env(safe-area-inset-top) + 20px) 12px 20px max(12px, env(safe-area-inset-left));
     border-top: 0; border-right: 1px solid var(--line); background: var(--surface);
   }
-  .nav a { flex-direction: row; gap: 12px; font-size: 15px; padding: 10px 12px; color: var(--ink-2); }
+  .nav a { flex: none; max-width: none; flex-direction: row; gap: 12px; font-size: 15px; padding: 10px 12px; color: var(--ink-2); }
   .nav a.active { background: var(--accent-soft); color: var(--accent); }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; padding: 0 8px 18px; }
   .brand img { border-radius: 8px; }
@@ -350,7 +351,9 @@ details.fu > summary::before { content: "?"; display: inline-grid; place-items: 
 details.fu[open] > summary::before { content: "!"; background: var(--easy-soft); color: var(--easy); }
 details.fu p { margin: 0 0 12px 28px; color: var(--ink-2); }
 .rel { display: flex; flex-wrap: wrap; gap: 6px; }
-.rel .chip { font-size: 13px; color: var(--accent); }
+.rel .chip { font-size: 13px; color: var(--accent); white-space: normal; text-align: left; max-width: 100%; }
+/* long titles and code never push a section wider than the phone */
+.deeper > *, .notes > *, .sol > *, .mine > *, .mine-review > *, .prob-body > * { min-width: 0; }
 .q-text { margin: 0 0 6px; color: var(--ink-2); font-size: 16px; line-height: 1.5; }
 .flash .hints { margin-top: 4px; }
 .grades .suggest { outline: 2px solid var(--med); outline-offset: 1px; }
@@ -445,7 +448,12 @@ ul.checklist li::before { content: "⚠"; position: absolute; left: 0; color: va
 .pb-table th { text-align: left; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); padding: 9px 12px; }
 .pb-table td { padding: 9px 12px; border-top: 1px solid var(--line); vertical-align: top; }
 .pb-table.cues td:last-child, .pb-table.variants td:first-child { white-space: nowrap; }
-@media (max-width: 640px) { .pb-table.cues td:last-child, .pb-table.variants td:first-child { white-space: normal; } .pb-table.ds { font-size: 12.5px; } }
+@media (max-width: 640px) {
+  .pb-table.cues td:last-child, .pb-table.variants td:first-child { white-space: normal; }
+  .pb-table.ds { font-size: 12.5px; }
+  /* a table wider than the phone scrolls inside its own box instead of zooming the whole page out */
+  .pb-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
 .pb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .pb-chips span { padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 14px; }
 .pb-refs { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); }
@@ -458,7 +466,7 @@ ul.checklist li::before { content: "⚠"; position: absolute; left: 0; color: va
 .vz-stage { display: grid; gap: 12px; min-height: 120px; }
 .vz-pane { overflow-x: auto; }
 .vz-label { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
-.vz-arr, .vz-list { display: flex; gap: 4px; align-items: flex-end; padding-bottom: 2px; }
+.vz-arr, .vz-list { display: flex; gap: 4px; align-items: flex-end; padding-bottom: 2px; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .vz-col { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 38px; }
 .vz-ptr { min-height: 18px; display: flex; gap: 2px; }
 .vz-ptr span { font: 700 11px var(--mono); color: #fff; background: var(--accent); padding: 0 5px; border-radius: 5px; }
@@ -543,7 +551,7 @@ ul.checklist li::before { content: "⚠"; position: absolute; left: 0; color: va
 .vz-ctrl button { min-width: 42px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 15px; }
 .vz-ctrl button.play { background: var(--accent); color: var(--accent-ink); border-color: transparent; min-width: 54px; }
 .vz-ctrl button[disabled] { opacity: .35; }
-.vz-ctrl input[type=range] { flex: 1; accent-color: var(--accent); }
+.vz-ctrl input[type=range] { flex: 1; min-width: 0; width: 100%; accent-color: var(--accent); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .vz-gc.fresh { background: #3a2a12; } :root:not([data-theme="light"]) .vz-gc.rot { background: #2b2620; } }
 :root[data-theme="dark"] .vz-gc.fresh { background: #3a2a12; }
 :root[data-theme="dark"] .vz-gc.rot { background: #2b2620; }

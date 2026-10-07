@@ -338,7 +338,7 @@
           <span class="spacer"></span>
           ${mock ? '' : `<button type="button" class="btn small primary" data-act="minedone" data-n="${n}">Done</button>`}</div>
         <textarea class="editor" data-editor="${n}" data-lang="${lang}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
-          placeholder="Write or paste your solution. It saves as you type.">${esc(e?.code || '')}</textarea>
+          placeholder="Write or paste your solution…">${esc(e?.code || '')}</textarea>
         <p class="small muted" style="margin:0">Tab indents · saved on this device as you type${MyCode.configured() ? ' and synced to your repo' : ''}.</p>
       </div>`;
     }
