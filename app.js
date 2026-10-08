@@ -146,8 +146,8 @@
   // Every unsolved problem, in sheet order, spread evenly over the days left until S.planEnd.
   // Nothing piles up: a missed day just raises the pace a little for every day after it.
   // Today's list is fixed for the day — solving one ticks it off, it doesn't pull in the next.
-  function schedule(t = today()) {
-    const end = S.planEnd && S.planEnd >= t ? S.planEnd : t;
+  function schedule(t = today(), want = S.planEnd) {
+    const end = want && want >= t ? want : t;
     const daysLeft = dayNum(end) - dayNum(t) + 1;
     const isSolved = p => S.status[p.n] === 'solved';
     const doneToday = PROBLEMS.filter(p => isSolved(p) && S.solvedOn[p.n] === t);
@@ -161,7 +161,7 @@
       days.push({ date: addDays(t, d), done: [], todo: rest.slice(0, k) });
       rest = rest.slice(k);
     }
-    const wk = currentWeek();
+    const wk = Math.min(WEEKS, Math.max(1, Math.floor((dayNum(t) - Date.UTC(...PLAN_START) / 864e5) / 7) + 1)); // the sheet's week on day t
     return {
       end, daysLeft, pace,
       today: days[0],            // { date, done: [problem], todo: [problem] } — todo[0] is "do this now"
@@ -169,6 +169,99 @@
       left: left.length,         // unsolved problems in total
       behind: left.filter(p => p.week < wk).length, // unsolved from weeks the sheet has already passed
     };
+  }
+
+  // ── Plan page (#/plan) ────────────────────────────────────────
+  const fmtDay = (s, o = { weekday: 'short', day: 'numeric', month: 'short' }) => {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, o);
+  };
+  const fmtShort = s => fmtDay(s, { day: 'numeric', month: 'short' });
+  // "3", or "2–3" when the problems don't split evenly over the days left
+  const paceText = s => { const lo = Math.floor((s.left + s.today.done.length) / s.daysLeft); return lo && lo !== s.pace ? `${lo}–${s.pace}` : `${s.pace}`; };
+  const mondayOf = s => { const [y, m, d] = s.split('-').map(Number); return addDays(s, -((new Date(y, m - 1, d).getDay() + 6) % 7)); };
+  const planOptions = () => [[PLAN_END, 'Sheet end'], [addDays(PLAN_END, 7), '+1 week'], [addDays(PLAN_END, 14), '+2 weeks'], [addDays(PLAN_END, 28), '+4 weeks']]
+    .filter(([d]) => d >= today());
+
+  function setPlanEnd(v) {
+    const t = today();
+    const onPlan = location.hash.startsWith('#/plan');
+    if (!/^\d{4}-\d\d-\d\d$/.test(v || '') || v < t) { toast('Pick a date from today on'); }
+    else {
+      S.planEnd = v; save();
+      toast(`Plan updated — ${paceText(schedule())} a day`);
+    }
+    const hadFocus = document.activeElement?.id === 'plan-end';
+    onPlan ? renderPlan() : renderMore();
+    if (hadFocus) $('#plan-end')?.focus();
+  }
+
+  function planRow(p) {
+    const solved = S.status[p.n] === 'solved', pat = NOTES[p.n]?.pat;
+    return `<div class="plan-p${solved ? ' done' : ''}">
+      <button type="button" class="plan-tick" data-act="status" data-n="${p.n}" data-v="solved" aria-label="${solved ? 'Mark not solved' : 'Mark solved'}">${statusDot(p.n)}</button>
+      <a href="#/problem/${p.n}"><span class="t">${esc(p.title)}</span>${diffBadge(p.diff)}${pat ? `<span class="tag">${esc(pat)}</span>` : ''}</a>
+    </div>`;
+  }
+
+  function renderPlan() {
+    const t = today(), s = schedule(t), tomorrow = addDays(t, 1);
+    // first scheduled problem of a topic you haven't touched yet → point at its Learn reading
+    const startAt = {}, seen = new Set();
+    for (const d of s.days) for (const p of d.todo) {
+      if (seen.has(p.topic)) continue;
+      seen.add(p.topic);
+      const tp = TOPIC_BY_NAME[p.topic];
+      if (tp && !tp.problems.some(q => S.status[q.n])) startAt[p.n] = tp;
+    }
+    const startLine = tp => {
+      const reads = tp.learn.filter(l => l.url);
+      return `<div class="plan-start">Start of <a href="#/pattern/${tp.slug}">${esc(tp.name)}</a>${reads.length ? ` — read: ${reads.map(l =>
+        `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)} ↗</a>`).join(', ')}` : ''}</div>`;
+    };
+    const dayCard = (day, i) => {
+      const total = day.done.length + day.todo.length;
+      const label = i === 0 ? 'Today' : day.date === tomorrow ? 'Tomorrow' : fmtDay(day.date);
+      const count = i === 0 ? (total ? (day.todo.length ? `${day.done.length} of ${total} done` : 'Done for today ✓') : 'Nothing left')
+        : `${total} problem${total === 1 ? '' : 's'}`;
+      return `<section class="card plan-day${i === 0 ? ' today' : ''}">
+        <div class="plan-day-h"><b>${label}</b>${label !== fmtDay(day.date) ? `<span class="muted small">${fmtDay(day.date)}</span>` : ''}
+          <span class="spacer"></span><span class="small muted">${count}</span></div>
+        ${day.done.map(planRow).join('')}
+        ${day.todo.map(p => (startAt[p.n] ? startLine(startAt[p.n]) : '') + planRow(p)).join('')}
+      </section>`;
+    };
+    // days grouped into calendar weeks (Mon–Sun)
+    const thisWeek = mondayOf(t), weeks = [];
+    s.days.forEach((day, i) => {
+      const w = mondayOf(day.date);
+      if (!weeks.length || weeks[weeks.length - 1].w !== w) weeks.push({ w, cards: [] });
+      weeks[weeks.length - 1].cards.push(dayCard(day, i));
+    });
+    const weekLabel = w => w === thisWeek ? 'This week' : w === addDays(thisWeek, 7) ? 'Next week' : `Week of ${fmtShort(w)}`;
+    // solved so far, newest day first
+    const groups = {};
+    for (const p of PROBLEMS) if (S.status[p.n] === 'solved') (groups[S.solvedOn[p.n] || ''] ||= []).push(p);
+    const keys = Object.keys(groups).sort((a, b) => (b || '0').localeCompare(a || '0'));
+    const solved = solvedCount();
+    const pastEnd = S.planEnd && S.planEnd < t;
+
+    view.innerHTML = `
+      <h1>Your plan</h1>
+      <p class="sub">${s.left ? `${s.left} left · ${paceText(s)} a day · finish by ${fmtDay(s.end)}` : 'Every problem is solved. Keep reviewing to make it stick.'}</p>
+      ${pastEnd ? `<p class="plan-note">Your finish date (${fmtDay(S.planEnd)}) has passed, so everything is on today. Pick a new date below.</p>` : ''}
+      ${s.behind ? `<p class="plan-note">${s.behind} of these ${s.behind === 1 ? 'is' : 'are'} from earlier weeks. They’re spread across the coming days, so nothing piles up.</p>` : ''}
+      <div class="card plan-end">
+        <div class="row"><label for="plan-end"><b>Finish by</b></label><span class="spacer"></span>
+          <input type="date" id="plan-end" class="plan-date" data-act="planend-input" min="${t}" value="${esc(pastEnd ? t : s.end)}"></div>
+        <div class="chips">${planOptions().map(([d, l]) =>
+          `<button type="button" class="chip${s.end === d ? ' on' : ''}" data-act="planend" data-v="${d}">${l} · ${fmtShort(d)}</button>`).join('')}</div>
+        <p class="small muted">A missed day doesn’t pile up: what’s left is re-spread over the days remaining.</p>
+      </div>
+      ${weeks.map(w => `<h3 class="eyebrow plan-wk">${weekLabel(w.w)}</h3><div class="plan-days">${w.cards.join('')}</div>`).join('')}
+      ${solved ? `<details class="card plan-done"><summary><b>Done so far</b> <span class="muted small">${solved} solved</span></summary>
+        ${keys.map(k => `<div class="eyebrow">${k ? (k === t ? 'Today' : fmtDay(k)) : 'Earlier'}</div>${groups[k].map(planRow).join('')}`).join('')}
+      </details>` : ''}`;
   }
 
   // ── Helpers ───────────────────────────────────────────────────
@@ -455,6 +548,11 @@
     save();
     paintStatus(n);
     renderNavFoot();
+    // Today is built from the plan: re-render so the hero moves on to the next problem
+    if ((location.hash.replace(/^#\/?/, '') || 'today').split('/')[0] === 'today') {
+      renderToday();
+      if (S.status[n] === 'solved') toast(`Solved: ${BY_N[n].title}`, { label: 'Undo', run: () => setStatus(n, 'solved') });
+    }
   }
   function paintStatus(n) {
     document.querySelectorAll(`[data-dot="${n}"]`).forEach(el => { el.className = `dot ${S.status[n] || ''}`; });
@@ -505,70 +603,116 @@
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; refreshInstallUI(); });
   window.addEventListener('appinstalled', () => { installPrompt = null; toast('App installed'); refreshInstallUI(); });
 
+  // ── Today: one obvious next problem, then today's list, then review ──
+  const diffWord = d => d ? `<span class="badge d-${esc(d)}">${esc(d)}</span>` : '';
+
+  function todayInstallBar() {
+    if (isStandalone() || S.hideInstall) return '';
+    return `<div class="td-install">
+      ${installPrompt ? `<span class="td-install-t"><b>Install the app</b> · full screen, works offline</span>${INSTALL_BTN}`
+        : `<details><summary><b>Install the app</b> · works offline <span class="td-how">How?</span></summary><p>${installHint()}</p></details>`}
+      <button type="button" class="td-x" data-act="hide-install" aria-label="Dismiss install tip">✕</button>
+    </div>`;
+  }
+
+  function todayHero(plan, q) {
+    const { done, todo } = plan.today;
+    const p = todo[0];
+    if (p) {
+      const x = NOTES[p.n] || {};
+      const hint = PLUS[p.n]?.hints?.[0] || x.key;
+      const total = done.length + todo.length;
+      return `<section class="card td-now" aria-label="Do this now">
+        <div class="td-kicker">Do this now${total > 1 ? `<span> · ${done.length + 1} of ${total} today</span>` : ''}</div>
+        <h1 class="td-title"><a href="#/problem/${p.n}">${esc(p.title)}</a></h1>
+        <div class="td-meta">${diffWord(p.diff)}${x.pat ? `<span class="tag">${esc(x.pat)}</span>` : ''}<span class="muted">${esc(p.topic)}</span>${mineMark(p.n)}</div>
+        ${hint ? `<details class="td-hint"><summary>Stuck? Show a hint</summary><p>${esc(hint)}</p></details>` : ''}
+        <div class="td-acts">
+          <a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener">Solve on LeetCode ↗</a>
+          <button type="button" class="btn" data-act="status" data-n="${p.n}" data-v="solved">✓ Mark solved</button>
+          <a class="btn ghost" href="#/problem/${p.n}"><span>Notes<span class="td-wide"> &amp; solution</span></span></a>
+        </div>
+      </section>`;
+    }
+    const next = plan.days[1]?.todo?.[0];
+    const review = q.all.length
+      ? `<a class="btn primary" href="#/review/today">Review ${q.all.length} card${q.all.length === 1 ? '' : 's'} · ~${reviewMinutes(q.all.length)} min</a>` : '';
+    return `<section class="card td-now td-won" aria-label="Today is done">
+      <div class="td-kicker">${plan.left ? `✓ Today’s ${done.length} done` : '✓ Every problem solved'}</div>
+      <h1 class="td-title">${plan.left ? 'Nice work — that’s today.' : 'The whole sheet is done.'}</h1>
+      <p class="td-sub">${q.all.length ? 'Lock it in with a quick review' : 'Reviews are done too'}${next ? ', or get ahead on tomorrow.' : '.'}</p>
+      <div class="td-acts">
+        ${review}
+        ${next ? `<a class="btn ${review ? '' : 'primary'}" href="#/problem/${next.n}">Get ahead: ${esc(next.title)}</a>` : ''}
+        ${!review && !next ? '<a class="btn primary" href="#/review">Drill a pattern</a>' : ''}
+      </div>
+    </section>`;
+  }
+
+  const reviewMinutes = k => Math.max(1, Math.round(k * 1.5));
+
+  function todayList(plan) {
+    const { done, todo } = plan.today;
+    const total = done.length + todo.length;
+    if (!total) return '';
+    const row = (p, isDone, isNow) => `<li class="td-item${isDone ? ' done' : ''}${isNow ? ' now' : ''}">
+        <button type="button" class="td-check" data-act="status" data-n="${p.n}" data-v="solved" aria-label="${isDone ? 'Mark not solved' : 'Mark solved'}: ${esc(p.title)}">${statusDot(p.n)}</button>
+        <a href="#/problem/${p.n}"><span class="td-it">${esc(p.title)}</span><span class="td-im">${esc(NOTES[p.n]?.pat || p.topic)}</span></a>
+        ${diffBadge(p.diff)}
+      </li>`;
+    return `<section class="td-sec">
+      <div class="td-sec-h"><h2>Today’s list</h2><span>${done.length} of ${total} done</span></div>
+      <div class="bar td-bar"><i style="width:${Math.round(done.length / total * 100)}%"></i></div>
+      <ul class="td-list">${done.map(p => row(p, true)).join('')}${todo.map((p, i) => row(p, false, i === 0)).join('')}</ul>
+      <a class="td-link" href="#/plan">See the full plan →</a>
+    </section>`;
+  }
+
+  function todayReview(q, reviewedToday) {
+    if (!q.all.length) {
+      return `<div class="card td-review calm"><span class="td-ico">✓</span><span><b>Reviews done</b>
+        <small>${reviewedToday ? `${reviewedToday} card${reviewedToday === 1 ? '' : 's'} reviewed today` : 'Nothing due right now'}</small></span>
+        <a class="td-go" href="#/review">Drill a pattern →</a></div>`;
+    }
+    const parts = [[q.due.length, 'due'], [q.revisit.length, 'flagged'], [q.fresh.length, 'new']].filter(([c]) => c).map(([c, l]) => `${c} ${l}`);
+    return `<a class="card td-review" href="#/review/today"><span class="td-ico">↻</span><span><b>${q.all.length} card${q.all.length === 1 ? '' : 's'} to review</b>
+        <small>~${reviewMinutes(q.all.length)} min · ${parts.join(' · ')}</small></span><span class="td-go">Start →</span></a>`;
+  }
+
   function renderToday() {
     const t = today();
-    const wk = currentWeek();
+    const plan = schedule(t);
     const q = dueToday();
     const reviewedToday = S.days[t]?.reviewed || 0;
-    const weekTopics = TOPICS.filter(tp => tp.items.some(i => i.week === wk));
-    const unlocked = TOPICS.filter(tp => tp.week <= wk);
-    const potd = unlocked[((planDay() % unlocked.length) + unlocked.length) % unlocked.length] || TOPICS[0];
-    const weekProblems = PROBLEMS.filter(p => p.week === wk);
-    const weekDone = weekProblems.filter(p => S.status[p.n] === 'solved').length;
-    const revisit = PROBLEMS.filter(p => S.status[p.n] === 'revisit');
-    const standalone = isStandalone();
-    const dateLabel = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+    const revisit = PROBLEMS.filter(p => S.status[p.n] === 'revisit').length;
+    const mockOn = S.mock && !S.mock.ended;
+    const allDone = !plan.today.todo.length;
+    const sk = streak();
+    const insights = weakLine() + slipLine();
 
-    view.innerHTML = `
-      ${!standalone && !S.hideInstall ? `<div class="card banner">
-        <div style="flex:1"><b>Install DSA Revise:</b> ${installHint()}</div>
-        <div class="row" style="gap:8px">${installPrompt ? INSTALL_BTN : ''}<button type="button" class="btn small ghost" data-act="hide-install">Dismiss</button></div></div>` : ''}
-      <div class="eyebrow">${esc(dateLabel)}</div>
-      <h1>Week ${wk} of ${WEEKS}</h1>
-      <p class="sub">${esc(WEEK_DATES[wk] || '')} · ${weekTopics.map(tp => esc(tp.name)).join(' · ')}</p>
+    view.innerHTML = `<div class="td">
+      ${todayInstallBar()}
+      <div class="td-head"><span class="td-date">${esc(new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }))}</span>
+        <span class="spacer"></span>${typeof syncChip === 'function' ? syncChip() : ''}</div>
+      ${plan.left ? `<a class="td-pace" href="#/plan">${paceText(plan)} a day · ${plan.left} left · finish by ${esc(fmtDay(plan.end, { day: 'numeric', month: 'short' }))} <span aria-hidden="true">→</span></a>` : ''}
 
-      <div class="stats">
-        <div class="card stat"><b>${q.all.length}</b><span>cards to review</span></div>
-        <div class="card stat"><b>${streak()}<small style="font-size:16px"> d</small></b><span>review streak</span></div>
-        <div class="card stat"><b>${solvedCount()}<small style="font-size:16px" class="muted">/${PROBLEMS.length}</small></b><span>solved</span></div>
-      </div>
+      ${todayHero(plan, q)}
+      ${todayList(plan)}
+      ${allDone ? '' : `<section class="td-sec"><div class="td-sec-h"><h2>Then</h2></div>${todayReview(q, reviewedToday)}</section>`}
 
-      ${q.all.length ? `<div class="card hero">
-          <div style="flex:1;min-width:220px"><h3 style="margin:0;font-size:19px">Today’s review</h3>
-          <p>${[[q.due.length, 'due'], [q.revisit.length, 'flagged revisit'], [q.fresh.length, 'new']].filter(([c]) => c).map(([c, l]) => `${c} ${l}`).join(' · ')}</p></div>
-          <a class="btn" href="#/review/today">Start · ${q.all.length} cards</a>
-        </div>`
-      : `<div class="card hero calm">
-          <div style="flex:1;min-width:220px"><h3 style="margin:0;font-size:19px">${reviewedToday ? 'All caught up for today' : 'Nothing due right now'}</h3>
-          <p class="muted">${reviewedToday ? `${reviewedToday} cards reviewed today. ` : ''}Drill a pattern if you want more.</p></div>
-          <a class="btn" href="#/review">Drill a pattern</a>
-        </div>`}
-
-      <div class="practice-row">
-        <a class="card practice" href="#/quiz/mix"><span class="pr-ico">🎯</span><span><b>Spot the pattern</b>
-          <small>10 mixed problems · name the technique${quizLine()}</small></span></a>
-        <a class="card practice" href="#/parsons/random"><span class="pr-ico">🧩</span><span><b>Rebuild the code</b>
-          <small>Put a solution’s lines back in order${Object.keys(S.parsons).length ? ` · ${Object.keys(S.parsons).length} rebuilt` : ''}</small></span></a>
-        <a class="card practice" href="#/mock"><span class="pr-ico">⏱</span><span><b>Mock interview</b>
-          <small>${S.mock && !S.mock.ended ? 'In progress — resume' : '45 min, six phases, self-assessment'}</small></span></a>
-      </div>
-      ${weakLine()}${slipLine()}
-
-      <h2>Pattern of the day</h2>
-      <div class="card potd">
-        <div class="row" style="margin-bottom:6px"><div class="ico">${esc(potd.icon)}</div>
-          <h3 style="margin:0;font-size:20px">${esc(potd.name)}</h3><span class="spacer"></span>
-          <a class="btn small" href="#/pattern/${potd.slug}">Open sheet</a></div>
-        <p class="gist" style="font-size:16px;margin:8px 0 12px">${esc(potd.gist)}</p>
-        <div class="eyebrow">Reach for it when</div>
-        <ul class="clean signals">${potd.signals.map(s => `<li>${esc(s)}</li>`).join('')}</ul>
-      </div>
-
-      <h2>This week <span class="muted small" style="font-weight:500">${weekDone}/${weekProblems.length} solved</span></h2>
-      <div class="list">${weekProblems.map(p => problemRow(p, { showKey: true })).join('')}</div>
-
-      ${revisit.length ? `<h2>Revisit pile</h2><div class="list">${revisit.map(p => problemRow(p, { showKey: true, showTopic: true })).join('')}</div>` : ''}
-    `;
+      <section class="td-sec td-extra">
+        <div class="td-sec-h"><h2>When you have time</h2></div>
+        <div class="td-more">
+          ${mockOn ? '<a class="td-chip hot" href="#/mock">⏱ Mock in progress — resume</a>' : ''}
+          <a class="td-chip" href="#/quiz/mix">🎯 Spot the pattern</a>
+          <a class="td-chip" href="#/parsons/random">🧩 Rebuild the code</a>
+          ${mockOn ? '' : '<a class="td-chip" href="#/mock">⏱ Mock interview</a>'}
+          ${revisit ? `<a class="td-chip" href="#/review/revisit">↻ ${revisit} flagged to revisit</a>` : ''}
+        </div>
+        ${insights ? `<div class="td-insights">${insights}</div>` : ''}
+        <p class="td-foot">${sk ? `${sk}-day review streak · ` : ''}${solvedCount()}/${PROBLEMS.length} solved · week ${currentWeek()} of ${WEEKS}</p>
+      </section>
+    </div>`;
   }
 
   let patternsMode = 'map';
@@ -1246,6 +1390,8 @@
       <h1>More</h1>
       <p class="sub">Settings, backup and install help.</p>
       <div class="card">
+        <div class="setting"><div><b>Finish the sheet by</b><p>Unsolved problems are spread evenly up to this date — ${paceText(schedule())} a day right now. <a href="#/plan">See the plan →</a></p></div>
+          <input type="date" id="plan-end" class="plan-date" data-act="planend-input" min="${today()}" value="${esc(schedule().end)}"></div>
         <div class="setting"><div><b>New cards per day</b><p>Unseen problems added to today’s review.</p></div>
           <div class="segmented">${[5, 8, 12, 20].map(v => `<button type="button" class="${S.newPerDay === v ? 'on' : ''}" data-act="newper" data-v="${v}">${v}</button>`).join('')}</div></div>
         <div class="setting"><div><b>Target recall</b><p>FSRS schedules each card for when your recall would drop to this. Higher = more reviews, stronger memory.</p></div>
@@ -1297,6 +1443,23 @@
     }
   }
 
+  // sync at a glance (Today header): not set up / syncing / synced · 2m ago / problem
+  const syncAgo = t => {
+    const s = (Date.now() - t) / 1000;
+    return s < 45 ? 'just now' : s < 5400 ? `${Math.max(1, Math.round(s / 60))}m ago` : s < 86400 * 1.5 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86400)}d ago`;
+  };
+  function syncChip() {
+    const st = MyCode.state;
+    const [cls, text, title] = !MyCode.configured() ? ['off', 'Not syncing · set up', 'Progress lives on this device only — tap to connect your other devices']
+      : st.busy ? ['busy', 'Syncing…', 'Syncing with your GitHub repo']
+      : st.error ? ['err', 'Sync problem', st.error]
+      : st.last ? ['ok', `Synced · ${syncAgo(st.last)}`, `Last synced ${new Date(st.last).toLocaleString()} — tap to sync now`]
+      : ['busy', 'Not synced yet', 'Waiting for the first sync — tap to sync now'];
+    return `<a class="sync-chip ${cls}" id="sync-chip" href="#/more" data-act="syncchip" title="${esc(title)}"><i aria-hidden="true"></i><span>${esc(text)}</span></a>`;
+  }
+  const refreshChip = () => { const el = $('#sync-chip'); if (el) el.outerHTML = syncChip(); };
+  let syncNote = null, showLink = false; // inline result of Save; the setup link when copying isn't possible
+
   function syncCardHTML() {
     const c = MyCode.config(), st = MyCode.state;
     const mine = PROBLEMS.filter(p => MyCode.get(p.n));
@@ -1310,9 +1473,14 @@
       <div class="setting col"><div><b>GitHub repo</b><p>Where your progress, your code and Claude’s reviews live.</p></div>
         <input class="search" id="sync-repo" value="${esc(c.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       <div class="setting col"><div><b>Access token</b><p>${c.hasToken ? 'A token is saved on this device (never included in backups). Paste a new one to replace it.' : `<a href="${tokenUrl}" target="_blank" rel="noopener">Create a fine-grained token ↗</a> → Repository access: <b>Only select repositories</b> → <b>${esc(c.repo.split('/')[1] || 'dsa-revise-data')}</b> → Permissions: <b>Contents · Read and write</b>. Paste it here.`}</p></div>
-        <div class="row" style="flex-wrap:nowrap"><input class="search" id="sync-token" type="password" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="row" style="flex-wrap:nowrap"><input class="search" id="sync-token" type="password" placeholder="github_pat_… or a setup link" autocomplete="off" autocapitalize="off" spellcheck="false">
           <button type="button" class="btn small primary" data-act="syncsave">Save</button>
-          ${c.hasToken ? '<button type="button" class="btn small ghost" data-act="syncforget">Forget</button>' : ''}</div></div>`;
+          ${c.hasToken ? '<button type="button" class="btn small ghost" data-act="syncforget">Forget</button>' : ''}</div>
+        ${syncNote && (syncNote.kind !== 'err' || st.error || !MyCode.configured()) ? `<p class="sync-note ${syncNote.kind}" role="status">${esc(syncNote.text)}</p>` : ''}</div>
+      ${MyCode.configured() ? `<div class="setting col"><div><b>Add another device</b><p>Copy a setup link and open it on your other device — it connects in one tap. For a Home Screen app, paste the link into Access token there and tap Save. The link contains your token: share it only with your own devices.</p></div>
+        <div class="row"><button type="button" class="btn small" data-act="synclink">Copy setup link</button></div>
+        ${showLink ? `<input class="search" id="sync-link" data-act="selectall" readonly value="${esc(MyCode.setupLink())}" aria-label="Setup link">` : ''}</div>` : ''}
+      <p class="small muted" style="margin:10px 2px 0">On iPhone/iPad, the Home Screen app and Safari keep separate data — connect inside the app you use.</p>`;
   }
   const refreshSync = () => {
     const card = $('#sync-card');
@@ -1340,7 +1508,7 @@
       if (before.lang !== S.lang) paintLang();
       const page = (location.hash.replace(/^#\/?/, '') || 'today').split('/')[0];
       const busy = document.activeElement?.matches('input, textarea') || quiz || pz || session || S.mock;
-      if (!busy && ['today', 'more', 'review', 'mock'].includes(page)) {
+      if (!busy && ['today', 'plan', 'more', 'review', 'mock'].includes(page)) {
         const y = window.scrollY;
         route();
         window.scrollTo(0, y);
@@ -1365,7 +1533,7 @@
     const [page, a, b] = parts;
     document.querySelectorAll('[data-nav]').forEach(el => {
       const nav = el.dataset.nav;
-      el.classList.toggle('active', nav === page || (nav === 'patterns' && (page === 'pattern' || page === 'problem')) ||
+      el.classList.toggle('active', nav === page || (nav === 'today' && page === 'plan') || (nav === 'patterns' && (page === 'pattern' || page === 'problem')) ||
         (nav === 'review' && (page === 'quiz' || page === 'parsons' || page === 'mock')));
     });
     if (page !== 'review') session = null;
@@ -1375,11 +1543,24 @@
     editing.clear();
     switch (page) {
       case 'today': renderToday(); break;
+      case 'plan': renderPlan(); break;
       case 'patterns': renderPatterns(); break;
       case 'pattern': renderPattern(a); break;
       case 'problems': renderProblems(); break;
       case 'problem': renderProblem(Number(a)); break;
       case 'more': renderMore(); break;
+      case 'connect': { // #/connect/<setup link from your other device>
+        const setup = MyCode.parseSetup(a);
+        history.replaceState(null, '', '#/today');
+        renderToday();
+        if (!setup) { toast('That setup link is incomplete — copy it again on your other device'); break; }
+        const c = MyCode.config();
+        if (!confirm(`Sync this device with ${setup.repo}?${c.hasToken && c.repo !== setup.repo ? ` (It currently syncs with ${c.repo}.)` : ''}`)) break;
+        MyCode.setConfig(setup);
+        toast('Connecting…');
+        MyCode.sync({ quiet: true }).then(ok => toast(ok ? 'Connected — this device is now syncing' : `Couldn’t connect: ${MyCode.state.error}`));
+        break;
+      }
       case 'playbook': renderPlaybook(); break;
       case 'mock': renderMock(); break;
       case 'quiz':
@@ -1422,7 +1603,8 @@
     if (!el) return;
     const { act, v, n } = el.dataset;
     switch (act) {
-      case 'status': e.preventDefault(); setStatus(Number(n), v); break;
+      case 'status': e.preventDefault(); setStatus(Number(n), v); if (location.hash.startsWith('#/plan')) renderPlan(); break;
+      case 'planend': setPlanEnd(v); break;
       case 'flip': if (session) { session.flipped = true; renderReview(); } break;
       case 'grade': grade(Number(v)); break;
       case 'showsol': if (session) { session.showSol = true; renderReview(); } break;
@@ -1519,15 +1701,41 @@
         break;
       }
       case 'syncsave': {
-        const token = $('#sync-token').value;
-        MyCode.setConfig({ repo: $('#sync-repo').value, ...(token ? { token } : {}) });
+        // a token, or a setup link copied from your other device
+        const raw = $('#sync-token').value.trim();
+        const setup = MyCode.parseSetup(raw);
+        const token = setup ? setup.token : raw;
+        MyCode.setConfig({ repo: setup ? setup.repo : $('#sync-repo').value, ...(token ? { token } : {}) });
         $('#sync-token').value = '';
-        if (MyCode.configured()) MyCode.sync().then(ok => ok && toast('Connected — your code is synced'));
-        else toast('Paste a token first');
+        if (!MyCode.configured()) { syncNote = { kind: 'err', text: 'Paste a token (or a setup link from your other device) first.' }; refreshSync(); break; }
+        syncNote = { kind: 'busy', text: 'Checking the token and syncing…' };
+        refreshSync();
+        MyCode.sync({ quiet: true }).then(ok => {
+          syncNote = ok ? { kind: 'ok', text: '✓ Connected — this device is syncing. Changes reach your other devices within about a minute.' }
+            : { kind: 'err', text: `✗ Not connected: ${MyCode.state.error || 'sync failed'}` };
+          refreshSync();
+          toast(ok ? 'Connected — synced' : 'Sync setup failed — see the message under Save');
+        });
+        break;
+      }
+      case 'synclink': {
+        const link = MyCode.setupLink();
+        const fallback = () => { showLink = true; refreshSync(); const i = $('#sync-link'); if (i) { i.focus(); i.select(); } toast('Copy the link below'); };
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => toast('Setup link copied — open it on your other device'), fallback);
+        else fallback();
+        break;
+      }
+      case 'selectall': el.select(); break;
+      case 'syncchip': {
+        e.preventDefault();
+        if (MyCode.configured() && !MyCode.state.error) { MyCode.sync().then(ok => ok && toast('Synced')); break; }
+        const toCard = () => $('#sync-card')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        if (location.hash === '#/more') toCard();
+        else { window.addEventListener('hashchange', () => setTimeout(toCard, 30), { once: true }); location.hash = '#/more'; }
         break;
       }
       case 'syncforget':
-        if (confirm('Remove the GitHub token from this device? Your code stays here and in the repo.')) { MyCode.setConfig({ repo: MyCode.config().repo, token: '' }); renderMore(); }
+        if (confirm('Remove the GitHub token from this device? Your code stays here and in the repo.')) { MyCode.setConfig({ repo: MyCode.config().repo, token: '' }); syncNote = null; showLink = false; renderMore(); }
         break;
       case 'syncnow': MyCode.sync().then(ok => ok && toast('Synced')); break;
       case 'fdiff': filters.diff = v; renderProblems(); break;
@@ -1573,6 +1781,10 @@
     if (!f) return;
     filters[f] = e.target.value;
     renderProblemList();
+  });
+
+  document.addEventListener('change', e => {
+    if (e.target.dataset.act === 'planend-input') setPlanEnd(e.target.value);
   });
 
   document.addEventListener('change', e => {
@@ -1681,6 +1893,7 @@
   applyTheme();
   renderNavFoot();
   window.addEventListener('hashchange', route);
-  document.addEventListener('mycode-change', () => { refreshMine(); refreshSync(); });
+  document.addEventListener('mycode-change', () => { refreshMine(); refreshSync(); refreshChip(); });
+  setInterval(() => { if (document.visibilityState === 'visible') refreshChip(); }, 30000); // keep "2m ago" honest
   route();
 })();
