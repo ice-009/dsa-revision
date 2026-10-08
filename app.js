@@ -1458,29 +1458,13 @@
     return `<a class="sync-chip ${cls}" id="sync-chip" href="#/more" data-act="syncchip" title="${esc(title)}"><i aria-hidden="true"></i><span>${esc(text)}</span></a>`;
   }
   const refreshChip = () => { const el = $('#sync-chip'); if (el) el.outerHTML = syncChip(); };
-  let syncNote = null, showLink = false; // inline result of Save; the setup link when copying isn't possible
-
   function syncCardHTML() {
-    const c = MyCode.config(), st = MyCode.state;
+    const st = MyCode.state;
     const mine = PROBLEMS.filter(p => MyCode.get(p.n));
     const reviewed = mine.filter(p => { const r = MyCode.review(p.n); return r && !r.stale; }).length;
-    const tokenUrl = 'https://github.com/settings/personal-access-tokens/new?name=DSA%20Revise%20sync&description=Your%20code%20sync%20for%20DSA%20Revise&expires_in=none&contents=write';
-    return `<div class="setting"><div><b>${MyCode.configured() ? (st.busy ? 'Syncing…' : st.error ? 'Sync problem' : '✓ Connected') : 'Not connected'}</b>
-          <p>${MyCode.configured()
-            ? st.error ? esc(st.error) : `${mine.length} solution${mine.length === 1 ? '' : 's'} of yours · ${reviewed} reviewed by Claude${st.last ? ` · last sync ${new Date(st.last).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}`
-            : 'Progress and your code live on this device only. Connect your private GitHub repo to keep every device in step — solved marks, reviews, streak, quiz scores, mocks — and so Claude Code can review your code.'}</p></div>
-        ${MyCode.configured() ? `<button type="button" class="btn small" data-act="syncnow" ${st.busy ? 'disabled' : ''}>Sync now</button>` : ''}</div>
-      <div class="setting col"><div><b>GitHub repo</b><p>Where your progress, your code and Claude’s reviews live.</p></div>
-        <input class="search" id="sync-repo" value="${esc(c.repo)}" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-      <div class="setting col"><div><b>Access token</b><p>${c.hasToken ? 'A token is saved on this device (never included in backups). Paste a new one to replace it.' : `<a href="${tokenUrl}" target="_blank" rel="noopener">Create a fine-grained token ↗</a> → Repository access: <b>Only select repositories</b> → <b>${esc(c.repo.split('/')[1] || 'dsa-revise-data')}</b> → Permissions: <b>Contents · Read and write</b>. Paste it here.`}</p></div>
-        <div class="row" style="flex-wrap:nowrap"><input class="search" id="sync-token" type="password" placeholder="github_pat_… or a setup link" autocomplete="off" autocapitalize="off" spellcheck="false">
-          <button type="button" class="btn small primary" data-act="syncsave">Save</button>
-          ${c.hasToken ? '<button type="button" class="btn small ghost" data-act="syncforget">Forget</button>' : ''}</div>
-        ${syncNote && (syncNote.kind !== 'err' || st.error || !MyCode.configured()) ? `<p class="sync-note ${syncNote.kind}" role="status">${esc(syncNote.text)}</p>` : ''}</div>
-      ${MyCode.configured() ? `<div class="setting col"><div><b>Add another device</b><p>Copy a setup link and open it on your other device — it connects in one tap. For a Home Screen app, paste the link into Access token there and tap Save. The link contains your token: share it only with your own devices.</p></div>
-        <div class="row"><button type="button" class="btn small" data-act="synclink">Copy setup link</button></div>
-        ${showLink ? `<input class="search" id="sync-link" data-act="selectall" readonly value="${esc(MyCode.setupLink())}" aria-label="Setup link">` : ''}</div>` : ''}
-      <p class="small muted" style="margin:10px 2px 0">On iPhone/iPad, the Home Screen app and Safari keep separate data — connect inside the app you use.</p>`;
+    return `<div class="setting"><div><b>${st.busy ? 'Syncing…' : st.error ? 'Sync problem' : st.last ? '✓ Synced' : 'Not synced yet'}</b>
+          <p>${st.error ? esc(st.error) : `Every device that opens this app shares one progress — solved marks, reviews, streak, quiz scores, mocks and your code. ${mine.length} solution${mine.length === 1 ? '' : 's'} of yours · ${reviewed} reviewed by Claude${st.last ? ` · last sync ${new Date(st.last).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : ''}`}</p></div>
+        <button type="button" class="btn small" data-act="syncnow" ${st.busy ? 'disabled' : ''}>Sync now</button></div>`;
   }
   const refreshSync = () => {
     const card = $('#sync-card');
@@ -1549,18 +1533,6 @@
       case 'problems': renderProblems(); break;
       case 'problem': renderProblem(Number(a)); break;
       case 'more': renderMore(); break;
-      case 'connect': { // #/connect/<setup link from your other device>
-        const setup = MyCode.parseSetup(a);
-        history.replaceState(null, '', '#/today');
-        renderToday();
-        if (!setup) { toast('That setup link is incomplete — copy it again on your other device'); break; }
-        const c = MyCode.config();
-        if (!confirm(`Sync this device with ${setup.repo}?${c.hasToken && c.repo !== setup.repo ? ` (It currently syncs with ${c.repo}.)` : ''}`)) break;
-        MyCode.setConfig(setup);
-        toast('Connecting…');
-        MyCode.sync({ quiet: true }).then(ok => toast(ok ? 'Connected — this device is now syncing' : `Couldn’t connect: ${MyCode.state.error}`));
-        break;
-      }
       case 'playbook': renderPlaybook(); break;
       case 'mock': renderMock(); break;
       case 'quiz':
@@ -1700,32 +1672,6 @@
         if (ta.value.trim()) saveEditor(ta);
         break;
       }
-      case 'syncsave': {
-        // a token, or a setup link copied from your other device
-        const raw = $('#sync-token').value.trim();
-        const setup = MyCode.parseSetup(raw);
-        const token = setup ? setup.token : raw;
-        MyCode.setConfig({ repo: setup ? setup.repo : $('#sync-repo').value, ...(token ? { token } : {}) });
-        $('#sync-token').value = '';
-        if (!MyCode.configured()) { syncNote = { kind: 'err', text: 'Paste a token (or a setup link from your other device) first.' }; refreshSync(); break; }
-        syncNote = { kind: 'busy', text: 'Checking the token and syncing…' };
-        refreshSync();
-        MyCode.sync({ quiet: true }).then(ok => {
-          syncNote = ok ? { kind: 'ok', text: '✓ Connected — this device is syncing. Changes reach your other devices within about a minute.' }
-            : { kind: 'err', text: `✗ Not connected: ${MyCode.state.error || 'sync failed'}` };
-          refreshSync();
-          toast(ok ? 'Connected — synced' : 'Sync setup failed — see the message under Save');
-        });
-        break;
-      }
-      case 'synclink': {
-        const link = MyCode.setupLink();
-        const fallback = () => { showLink = true; refreshSync(); const i = $('#sync-link'); if (i) { i.focus(); i.select(); } toast('Copy the link below'); };
-        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => toast('Setup link copied — open it on your other device'), fallback);
-        else fallback();
-        break;
-      }
-      case 'selectall': el.select(); break;
       case 'syncchip': {
         e.preventDefault();
         if (MyCode.configured() && !MyCode.state.error) { MyCode.sync().then(ok => ok && toast('Synced')); break; }
@@ -1734,9 +1680,6 @@
         else { window.addEventListener('hashchange', () => setTimeout(toCard, 30), { once: true }); location.hash = '#/more'; }
         break;
       }
-      case 'syncforget':
-        if (confirm('Remove the GitHub token from this device? Your code stays here and in the repo.')) { MyCode.setConfig({ repo: MyCode.config().repo, token: '' }); syncNote = null; showLink = false; renderMore(); }
-        break;
       case 'syncnow': MyCode.sync().then(ok => ok && toast('Synced')); break;
       case 'fdiff': filters.diff = v; renderProblems(); break;
       case 'fstatus': filters.status = v; renderProblems(); break;

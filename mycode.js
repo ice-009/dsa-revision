@@ -14,8 +14,8 @@
    When it syncs: 3 s after a change, on launch, every 45 s while the app is on screen, when you come
    back to it, when the connection returns — and straight away (one keepalive request) when you leave.
 
-   Exposes window.MyCode = { get, set, all, importAll, review, config, setConfig, configured, sync, state,
-   progress, touch, setupLink, parseSetup } and fires a "mycode-change" event on document whenever entries,
+   Exposes window.MyCode = { get, set, all, importAll, review, config, configured, sync, state,
+   progress, touch } and fires a "mycode-change" event on document whenever entries,
    reviews or sync state change. */
 (function () {
   'use strict';
@@ -27,7 +27,7 @@
   const HEAD_KEY = 'dsa-revise:sync-head'; // { sha, extra } of progress.json as of the last successful sync
   const PEND_KEY = 'dsa-revise:sync-pending'; // writes sent but not yet confirmed: [{ id, data }]
   const DEFAULT_REPO = 'ice-009/dsa-revise-data';
-  const API = 'https://api.github.com';
+  const API = 'api/sync'; // the app's own proxy to GitHub (api/sync.js)
   const PUSH_DELAY = 3000; // push this long after the last change
   const POLL = 45000; // pull this often while the app is on screen (~240 requests/hour; GitHub allows 5000)
   const TIMEOUT = 20000; // give up on a request after this long, so a stalled one can't block every later sync
@@ -37,7 +37,8 @@
 
   let entries = read(CODE_KEY, {}); // n -> { lang, code, rev, at, dirty }
   let reviews = read(REVIEW_KEY, {}); // n -> review (cached copy of reviews.json)
-  let cfg = read(SYNC_KEY, {}); // { token, repo, last }
+  let cfg = read(SYNC_KEY, {}); // { last }
+  if (cfg.token || cfg.repo) { cfg = { last: cfg.last }; write(SYNC_KEY, cfg); } // per-device tokens are gone
   const state = { busy: false, error: '', last: cfg.last || 0 };
 
   const changed = () => document.dispatchEvent(new CustomEvent('mycode-change'));
@@ -96,38 +97,9 @@
 
   /* ---------- sync config ---------- */
 
-  const configured = () => !!(cfg.token && cfg.repo);
-  const config = () => ({ repo: cfg.repo || DEFAULT_REPO, hasToken: !!cfg.token, last: state.last });
-  function setConfig({ token, repo }) {
-    const was = cfg.repo || DEFAULT_REPO;
-    cfg = { ...cfg, repo: (repo || DEFAULT_REPO).trim() };
-    // a different repo is a different history: merge against it from scratch
-    if (cfg.repo !== was) [BASE_KEY, HEAD_KEY, PEND_KEY].forEach(k => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } });
-    if (token !== undefined) cfg.token = token.trim();
-    if (!cfg.token) delete cfg.token;
-    write(SYNC_KEY, cfg);
-    state.error = '';
-    changed();
-  }
-
-  /* ---------- setup link: connect another device of yours in one tap ---------- */
-
-  const b64url = s => b64enc(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  function setupLink() {
-    if (!configured()) return '';
-    return `${location.origin}${location.pathname}#/connect/${b64url(JSON.stringify({ repo: cfg.repo, token: cfg.token }))}`;
-  }
-  // a whole setup link, or just the part after #/connect/ → { repo, token }, or null
-  function parseSetup(text) {
-    const s = String(text || '').trim();
-    const m = s.match(/#\/connect\/([A-Za-z0-9_-]+)/) || s.match(/^([A-Za-z0-9_-]+)$/);
-    if (!m) return null;
-    try {
-      const v = JSON.parse(b64dec(m[1].replace(/-/g, '+').replace(/_/g, '/')));
-      if (v && typeof v.token === 'string' && v.token && typeof v.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(v.repo)) return { repo: v.repo, token: v.token };
-    } catch (e) { /* not a setup link */ }
-    return null;
-  }
+  // one person, one repo: every copy of the app syncs through /api/sync, which holds the token
+  const configured = () => location.protocol !== 'file:';
+  const config = () => ({ repo: DEFAULT_REPO, last: state.last });
 
   /* ---------- GitHub contents API ---------- */
 
@@ -141,7 +113,7 @@
 
   // keepalive lets a write finish after you leave the app; browsers allow it for bodies under 64 KB
   async function gh(path, opts = {}, accept = 'application/vnd.github+json') {
-    const url = `${API}/repos/${cfg.repo}/contents/${path}`;
+    const url = `${API}?path=${encodeURIComponent(path)}`;
     const ctl = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ctl && !opts.keepalive ? setTimeout(() => ctl.abort(), TIMEOUT) : 0;
     let res;
@@ -151,18 +123,18 @@
         keepalive: !!(opts.keepalive && opts.body && opts.body.length < 60000),
         cache: 'no-store', // never a stale copy from the HTTP cache
         signal: ctl?.signal,
-        headers: { Accept: accept, Authorization: `Bearer ${cfg.token}`, 'X-GitHub-Api-Version': '2022-11-28', ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
+        headers: { Accept: accept, ...(opts.body ? { 'Content-Type': 'application/json' } : {}) },
       });
     } catch (err) {
-      throw new Error(err?.name === 'AbortError' ? 'GitHub took too long to answer — will retry.' : 'Can’t reach GitHub — will retry.');
+      throw new Error(err?.name === 'AbortError' ? 'Sync took too long to answer — will retry.' : 'Can’t reach the sync server — will retry.');
     } finally {
       clearTimeout(timer);
     }
-    if (res.status === 401) throw new Error('GitHub rejected the token — paste a fresh one in More.');
+    if (res.status === 401 || res.status === 500) throw new Error('The sync server’s GitHub token is missing or expired.');
     if ((res.status === 403 || res.status === 429) && (res.status === 429 || res.headers?.get?.('x-ratelimit-remaining') === '0')) throw new Error('GitHub rate limit reached — will retry later.');
-    if (res.status === 403) throw new Error('The token can’t write to this repo — give it Contents: read & write.');
+    if (res.status === 403) throw new Error('The sync server’s token can’t write to the data repo.');
     if (res.status === 404 && !opts.method) return null;
-    if (res.status === 404) throw new Error(`Repo ${cfg.repo} not found, or the token can’t see it.`);
+    if (res.status === 404) throw new Error(`Repo ${DEFAULT_REPO} not found, or the sync server can’t see it.`);
     if (res.status === 409 || res.status === 422) { const err = new Error('conflict'); err.conflict = true; throw err; }
     if (!res.ok) throw new Error(`GitHub error ${res.status}`);
     return accept.includes('raw') ? res.text() : res.json();
@@ -439,5 +411,5 @@
   setInterval(autoSync, POLL);
   setTimeout(autoSync, 1500);
 
-  window.MyCode = { get, set, all, importAll, review, config, setConfig, configured, sync, state, progress, touch: schedulePush, setupLink, parseSetup, _merge: mergeProgress };
+  window.MyCode = { get, set, all, importAll, review, config, configured, sync, state, progress, touch: schedulePush, _merge: mergeProgress };
 })();
