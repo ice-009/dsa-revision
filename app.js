@@ -5,6 +5,7 @@
   const LESSONS = window.LESSONS || {}, PLUS = window.PLUS || {}, EXPLAIN = window.EXPLAIN || {};
   const MyCode = window.MyCode;
   const PLAN_START = [2026, 8, 20]; // 20 Sep 2026 (month is 0-based)
+  const PLAN_END = '2026-11-21'; // default finish-by date: the sheet's last day
   const WEEKS = Math.max(...ITEMS.map(i => i.week));
   const PROBLEMS = ITEMS.filter(i => i.kind === 'Practice');
   const BY_N = Object.fromEntries(ITEMS.map(i => [i.n, i]));
@@ -33,7 +34,7 @@
 
   // ── State ─────────────────────────────────────────────────────
   const KEY = 'dsa-revise:v1';
-  const defaults = () => ({ status: {}, srs: {}, days: {}, newPerDay: 8, theme: 'auto', hideInstall: false, lang: 'cpp', retention: 0.9, quiz: {}, parsons: {}, cxq: [0, 0], slips: {}, mocks: [], mock: null });
+  const defaults = () => ({ status: {}, srs: {}, days: {}, newPerDay: 8, theme: 'auto', hideInstall: false, lang: 'cpp', retention: 0.9, quiz: {}, parsons: {}, cxq: [0, 0], slips: {}, mocks: [], mock: null, solvedOn: {}, planEnd: PLAN_END });
   // a fresh install: problems already done on the sheet start as solved
   const seeded = () => {
     const s = defaults();
@@ -140,6 +141,35 @@
   };
 
   const solvedCount = () => PROBLEMS.filter(p => S.status[p.n] === 'solved').length;
+
+  // ── Day-by-day plan ───────────────────────────────────────────
+  // Every unsolved problem, in sheet order, spread evenly over the days left until S.planEnd.
+  // Nothing piles up: a missed day just raises the pace a little for every day after it.
+  // Today's list is fixed for the day — solving one ticks it off, it doesn't pull in the next.
+  function schedule(t = today()) {
+    const end = S.planEnd && S.planEnd >= t ? S.planEnd : t;
+    const daysLeft = dayNum(end) - dayNum(t) + 1;
+    const isSolved = p => S.status[p.n] === 'solved';
+    const doneToday = PROBLEMS.filter(p => isSolved(p) && S.solvedOn[p.n] === t);
+    const left = PROBLEMS.filter(p => !isSolved(p));
+    const pace = Math.ceil((left.length + doneToday.length) / daysLeft);
+    const todo = left.slice(0, Math.max(0, pace - doneToday.length));
+    const days = [{ date: t, done: doneToday, todo }];
+    let rest = left.slice(todo.length);
+    for (let d = 1; d < daysLeft && rest.length; d++) {
+      const k = Math.ceil(rest.length / (daysLeft - d));
+      days.push({ date: addDays(t, d), done: [], todo: rest.slice(0, k) });
+      rest = rest.slice(k);
+    }
+    const wk = currentWeek();
+    return {
+      end, daysLeft, pace,
+      today: days[0],            // { date, done: [problem], todo: [problem] } — todo[0] is "do this now"
+      days,                      // today first, then one entry per future day that has problems
+      left: left.length,         // unsolved problems in total
+      behind: left.filter(p => p.week < wk).length, // unsolved from weeks the sheet has already passed
+    };
+  }
 
   // ── Helpers ───────────────────────────────────────────────────
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -419,6 +449,9 @@
   function setStatus(n, v) {
     S.status[n] = S.status[n] === v ? undefined : v;
     if (!S.status[n]) delete S.status[n];
+    // the plan counts what you solved today toward today's list
+    if (S.status[n] === 'solved') S.solvedOn[n] ||= today();
+    else delete S.solvedOn[n];
     save();
     paintStatus(n);
     renderNavFoot();
