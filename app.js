@@ -300,16 +300,17 @@
   window.appToast = toast;
 
   const mineMark = n => `<span class="minemark" data-minemark="${n}" title="Has your code" ${MyCode.get(n) ? '' : 'hidden'}>✎</span>`;
-  const diffBadge = d => d ? `<span class="badge d-${esc(d)}">${esc(d[0])}</span>` : '';
+  const diffBadge = d => d ? `<span class="badge d-${esc(d)}">${esc(d)}</span>` : '';
   const statusDot = n => `<span class="dot ${esc(S.status[n] || '')}" data-dot="${n}" aria-label="${esc(S.status[n] || 'not started')}"></span>`;
 
-  function notesHTML(p) {
+  // tests: false leaves out "What it tests" (the problem page shows it on its Problem step)
+  function notesHTML(p, { tests = true } = {}) {
     const x = NOTES[p.n];
     if (!x) return '';
     return `<div class="notes">
-      <div><div class="lbl">What it tests</div>${esc(x.tests)}</div>
+      ${tests ? `<div><div class="lbl">What it tests</div>${esc(x.tests)}</div>` : ''}
       ${EXPLAIN[p.n]?.a ? `<div class="why"><div class="lbl">Understand the approach</div>${esc(EXPLAIN[p.n].a)}</div>` : ''}
-      <div><div class="lbl">Approach${differs(p.n) ? ` <a href="#/problem/${p.n}" data-act="jump" data-v="mine-${p.n}" class="mine-chip">you solved it differently ↓</a>` : ''}</div><ol>${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+      <div><div class="lbl">Approach${differs(p.n) ? ` <a href="#/problem/${p.n}/code" data-act="jump" data-v="mine-${p.n}" class="mine-chip">you solved it differently →</a>` : ''}</div><ol>${x.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
       <div class="key"><div class="lbl">Key insight</div>${esc(x.key)}</div>
       <div class="facts">
         <div><div class="lbl">Complexity</div><span class="cx">${esc(x.cx)}</span></div>
@@ -510,33 +511,18 @@
       <button type="button" class="btn small ${s === 'revisit' ? 'on-revisit' : ''}" data-act="status" data-n="${n}" data-v="revisit">${s === 'revisit' ? '↻ Revisit' : 'Flag revisit'}</button>`;
   }
 
+  // one line per problem: tick it off in place, or open its page
   function problemRow(p, { showKey = false, showTopic = false } = {}) {
     const x = NOTES[p.n] || {};
-    return `<details class="prob" data-n="${p.n}">
-      <summary>
-        ${statusDot(p.n)}
-        <span class="t">${esc(p.title)}<small>#${p.n}${showTopic ? ` · ${esc(p.topic)}` : ''}</small></span>
-        <span class="meta">${mineMark(p.n)}<span class="tag">${esc(x.pat)}</span>${diffBadge(p.diff)}</span>
-        ${showKey ? `<span class="key-line">${esc(x.key)}</span>` : ''}
-      </summary>
-      <div class="prob-body" data-body="${p.n}"></div>
-    </details>`;
-  }
-
-  function problemBody(p) {
-    return `${statementHTML(p)}
-      ${hintsHTML(p.n)}
-      ${notesHTML(p)}
-      ${pathHTML(p)}
-      ${solutionHTML(p)}
-      ${mineHTML(p.n)}
-      ${deeperHTML(p)}
-      <div class="actions">
-        ${statusButtons(p.n)}
-        <span class="spacer"></span>
-        <a class="btn small ghost" href="#/problem/${p.n}">Full page</a>
-        <a class="btn small ghost" href="${esc(p.url)}" target="_blank" rel="noopener">LeetCode ↗</a>
-      </div>`;
+    return `<div class="prob" data-n="${p.n}">
+      <button type="button" class="prob-tick" data-act="status" data-n="${p.n}" data-v="solved" aria-label="Toggle solved: ${esc(p.title)}">${statusDot(p.n)}</button>
+      <a class="prob-link" href="#/problem/${p.n}">
+        <span class="t">${esc(p.title)}</span>
+        <span class="prob-meta">${diffBadge(p.diff)}${x.pat ? `<span class="tag">${esc(x.pat)}</span>` : ''}${showTopic ? `<span class="muted small">${esc(p.topic)}</span>` : ''}${mineMark(p.n)}</span>
+        ${showKey && x.key ? `<span class="key-line">${esc(x.key)}</span>` : ''}
+      </a>
+      <span class="chev" aria-hidden="true">›</span>
+    </div>`;
   }
 
   function setStatus(n, v) {
@@ -556,7 +542,7 @@
   }
   function paintStatus(n) {
     document.querySelectorAll(`[data-dot="${n}"]`).forEach(el => { el.className = `dot ${S.status[n] || ''}`; });
-    document.querySelectorAll(`[data-actions="${n}"], details.prob[data-n="${n}"] .actions`).forEach(el => {
+    document.querySelectorAll(`[data-actions="${n}"]`).forEach(el => {
       el.querySelectorAll('[data-act="status"]').forEach(b => b.remove());
       el.insertAdjacentHTML('afterbegin', statusButtons(n));
     });
@@ -630,7 +616,7 @@
         <div class="td-acts">
           <a class="btn primary" href="${esc(p.url)}" target="_blank" rel="noopener">Solve on LeetCode ↗</a>
           <button type="button" class="btn" data-act="status" data-n="${p.n}" data-v="solved">✓ Mark solved</button>
-          <a class="btn ghost" href="#/problem/${p.n}"><span>Notes<span class="td-wide"> &amp; solution</span></span></a>
+          <a class="btn ghost" href="#/problem/${p.n}/approach"><span>Notes<span class="td-wide"> &amp; solution</span></span></a>
         </div>
       </section>`;
     }
@@ -783,9 +769,13 @@
     </section>`).join('');
 
     view.innerHTML = `
-      <h1>Patterns</h1>
-      <p class="sub">${TOPICS.length} patterns behind the ${PROBLEMS.length} problems in your sheet.</p>
-      <div class="segmented" style="margin-bottom:18px">
+      <header class="page-h"><h1>Learn</h1>
+        <p class="sub">The ${TOPICS.length} patterns behind the ${PROBLEMS.length} problems in your sheet, and how to run an interview.</p></header>
+      <a class="card entry" href="#/playbook"><span class="entry-ico" aria-hidden="true">📘</span>
+        <span><b>Interview playbook</b><small>How to study, the 6-step interview method, and which pattern fits which cue</small></span>
+        <span class="chev" aria-hidden="true">›</span></a>
+      <div class="sec-h"><h2>Patterns</h2></div>
+      <div class="segmented" role="group" aria-label="Show patterns as" style="margin-bottom:16px">
         <button type="button" class="${patternsMode === 'map' ? 'on' : ''}" data-act="pmode" data-v="map">Roadmap</button>
         <button type="button" class="${patternsMode === 'cards' ? 'on' : ''}" data-act="pmode" data-v="cards">Cards</button>
         <button type="button" class="${patternsMode === 'page' ? 'on' : ''}" data-act="pmode" data-v="page">One-page skim</button>
@@ -801,7 +791,7 @@
     const ladder = (L.ladder || tp.problems.map(p => p.n)).map(n => BY_N[n]).filter(Boolean);
     const traps = [...(L.mistakes || []), ...tp.traps.filter(t => !(L.mistakes || []).includes(t))];
     view.innerHTML = `
-      <a href="#/patterns" class="small">‹ Patterns</a>
+      <a href="#/patterns" class="back">‹ Patterns</a>
       <div class="row" style="margin:10px 0 6px"><div class="ico">${esc(tp.icon)}</div>
         <h1 style="margin:0">${esc(tp.name)}</h1></div>
       <p class="sub">Week ${tp.week} · ${done}/${tp.problems.length} solved</p>
@@ -854,19 +844,19 @@
 
   const filters = { q: '', topic: '', diff: '', status: '' };
   function renderProblems() {
+    const sel = (f, label, opts) => `<label class="fsel${filters[f] ? ' on' : ''}"><span class="sr">${label}</span>
+      <select data-filter="${f}">${opts.map(([v, l]) => `<option value="${esc(v)}" ${filters[f] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
     view.innerHTML = `
-      <h1>Problems</h1>
-      <p class="sub">Tap a problem for its approach and notes.</p>
+      <header class="page-h"><h1>Problems</h1>
+        <p class="sub">Every problem in your sheet. Tick the circle when you’ve solved one; open it to study it step by step.</p></header>
       <div class="filters">
-        <input class="search" type="search" placeholder="Search problems, patterns, tricks…" value="${esc(filters.q)}" data-filter="q" autocomplete="off" autocorrect="off" spellcheck="false">
-        <div class="chips">
-          <select class="chip" data-filter="topic" aria-label="Topic">
-            <option value="">All topics</option>
-            ${TOPICS.map(tp => `<option value="${esc(tp.name)}" ${filters.topic === tp.name ? 'selected' : ''}>${esc(tp.name)}</option>`).join('')}
-          </select>
-          ${['', 'Easy', 'Medium', 'Hard'].map(d => `<button type="button" class="chip ${filters.diff === d ? 'on' : ''}" data-act="fdiff" data-v="${d}">${d || 'Any level'}</button>`).join('')}
-          ${[['', 'Any status'], ['todo', 'To do'], ['solved', 'Solved'], ['revisit', 'Revisit']].map(([v, l]) => `<button type="button" class="chip ${filters.status === v ? 'on' : ''}" data-act="fstatus" data-v="${v}">${l}</button>`).join('')}
+        <input class="search" type="search" placeholder="Search by name, pattern or trick" aria-label="Search problems" value="${esc(filters.q)}" data-filter="q" autocomplete="off" autocorrect="off" spellcheck="false">
+        <div class="fsels">
+          ${sel('topic', 'Topic', [['', 'All topics'], ...TOPICS.map(tp => [tp.name, tp.name])])}
+          ${sel('diff', 'Difficulty', [['', 'Any difficulty'], ['Easy', 'Easy'], ['Medium', 'Medium'], ['Hard', 'Hard']])}
+          ${sel('status', 'Status', [['', 'Any status'], ['todo', 'To do'], ['solved', 'Solved'], ['revisit', 'To revisit']])}
         </div>
+        <div class="fcount" id="fcount" aria-live="polite"></div>
       </div>
       <div id="plist"></div>`;
     renderProblemList();
@@ -888,41 +878,97 @@
     };
     const shown = PROBLEMS.filter(match);
     const groups = TOPICS.map(tp => [tp, shown.filter(p => p.topic === tp.name)]).filter(([, ps]) => ps.length);
+    const active = ['topic', 'diff', 'status'].some(f => filters[f]) || q;
+    $('#fcount').innerHTML = `${shown.length === PROBLEMS.length ? `${PROBLEMS.length} problems` : `${shown.length} of ${PROBLEMS.length} problems`}
+      ${active ? '<button type="button" class="linkbtn" data-act="fclear">Clear filters</button>' : ''}`;
     $('#plist').innerHTML = shown.length
-      ? groups.map(([tp, ps]) => `<div class="group-h"><h3>${esc(tp.name)}</h3><span class="muted small">${ps.length}</span></div>
-          <div class="list">${ps.map(p => problemRow(p)).join('')}</div>`).join('')
-      : `<p class="muted" style="text-align:center;padding:40px 0">No problems match.</p>`;
+      ? groups.map(([tp, ps]) => {
+        const done = tp.problems.filter(p => S.status[p.n] === 'solved').length;
+        return `<div class="group-h"><h2>${esc(tp.name)}</h2><span>${done}/${tp.problems.length} solved</span></div>
+          <div class="list">${ps.map(p => problemRow(p)).join('')}</div>`;
+      }).join('')
+      : `<div class="empty-state"><b>No problems match</b><p>Try a shorter search or clear the filters.</p>
+          <button type="button" class="btn small" data-act="fclear">Clear filters</button></div>`;
   }
 
-  function renderProblem(n) {
+  // ── Problem page: one problem, studied in steps ──────────────
+  // Each step is its own tab so the page shows one thing at a time, in the order you'd study it.
+  const PSTEPS = [
+    ['problem', 'Problem', ''],
+    ['approach', 'Approach', 'Tried it? See the approach'],
+    ['solution', 'Solution', 'See the full solution'],
+    ['code', 'Your code', 'Write your own version'],
+    ['deeper', 'Go deeper', 'Follow-ups & related problems'],
+  ];
+
+  function renderProblem(n, tab) {
     const p = BY_N[n];
     if (!p || p.kind !== 'Practice') return renderNotFound();
     const tp = TOPIC_BY_NAME[p.topic];
+    const x = NOTES[n] || {};
     const i = PROBLEMS.indexOf(p);
     const prev = PROBLEMS[i - 1], next = PROBLEMS[i + 1];
+    const has = { problem: true, approach: !!NOTES[n], solution: !!SOLUTIONS[n], code: true, deeper: !!PLUS[n] };
+    const steps = PSTEPS.filter(([k]) => has[k]);
+    if (!steps.some(([k]) => k === tab)) tab = 'problem';
+
+    const body = {
+      problem: `${statementHTML(p) || `<p class="q-text">Open it on LeetCode to read the full statement.</p>`}
+        ${x.tests ? `<div class="pt-tests"><div class="lbl">What it tests</div>${esc(x.tests)}</div>` : ''}
+        ${p.note ? `<div class="notes"><div class="sheet">From your sheet: ${esc(p.note)}</div></div>` : ''}
+        <div class="pt-tip"><b>How to use this:</b> try it on LeetCode first. Stuck? Open one hint at a time before moving on.</div>
+        ${hintsHTML(n)}`,
+      approach: `${notesHTML(p, { tests: false })}${pathHTML(p)}`,
+      solution: solutionHTML(p),
+      code: mineHTML(n),
+      deeper: deeperHTML(p),
+    };
+    const pane = ([k], j) => {
+      const nx = steps[j + 1];
+      return `<section class="pt-pane" id="pt-${k}" data-pane="${k}" role="tabpanel" aria-labelledby="ptab-${k}" ${k === tab ? '' : 'hidden'}>
+        ${body[k]}
+        ${nx ? `<div class="pt-next"><button type="button" class="btn" data-act="ptab" data-v="${nx[0]}">${nx[2]} <span aria-hidden="true">→</span></button></div>` : ''}
+      </section>`;
+    };
+
     view.innerHTML = `
-      <a href="#/pattern/${tp.slug}" class="small">‹ ${esc(tp.name)}</a>
-      <div class="row" style="margin-top:10px;gap:10px">${statusDot(p.n)}<h1 style="margin:0">${esc(p.title)}</h1></div>
-      <p class="sub" style="margin-top:6px">#${p.n} · Week ${p.week} · ${diffBadge(p.diff)} <span class="tag">${esc(NOTES[p.n].pat)}</span></p>
-      <div class="card prob-page">
-        ${statementHTML(p)}
-        ${hintsHTML(p.n)}
-        ${notesHTML(p)}
-        ${pathHTML(p)}
-        ${solutionHTML(p)}
-        ${mineHTML(p.n)}
-        ${deeperHTML(p)}
-        <div class="actions" data-actions="${p.n}">
-          ${statusButtons(p.n)}
-          <span class="spacer"></span>
-          <a class="btn small ghost" href="${esc(p.url)}" target="_blank" rel="noopener">LeetCode ↗</a>
+      <a href="#/pattern/${tp.slug}" class="back">‹ ${esc(tp.name)}</a>
+      <header class="pp-head">
+        <div class="pp-kicker">#${p.n} · Week ${p.week} · ${esc(p.topic)}</div>
+        <h1>${esc(p.title)}</h1>
+        <div class="pp-meta">${diffBadge(p.diff)}${x.pat ? `<span class="tag">${esc(x.pat)}</span>` : ''}${mineMark(n)}</div>
+        <div class="pp-acts" data-actions="${n}">
+          ${statusButtons(n)}
+          <a class="btn small primary" href="${esc(p.url)}" target="_blank" rel="noopener">Solve on LeetCode ↗</a>
         </div>
-      </div>
-      <div class="row" style="margin-top:16px">
-        ${prev ? `<a class="btn small" href="#/problem/${prev.n}">‹ ${esc(prev.title)}</a>` : ''}
-        <span class="spacer"></span>
-        ${next ? `<a class="btn small" href="#/problem/${next.n}">${esc(next.title)} ›</a>` : ''}
-      </div>`;
+      </header>
+      <nav class="ptabs" role="tablist" aria-label="Study steps">${steps.map(([k, l], j) =>
+        `<button type="button" role="tab" id="ptab-${k}" aria-controls="pt-${k}" aria-selected="${k === tab}" tabindex="${k === tab ? 0 : -1}" class="${k === tab ? 'on' : ''}" data-act="ptab" data-v="${k}"><span class="ptab-n">${j + 1}</span>${l}</button>`).join('')}</nav>
+      <div class="card pt-card">${steps.map(pane).join('')}</div>
+      <nav class="pp-nav" aria-label="Other problems">
+        ${prev ? `<a href="#/problem/${prev.n}"><small>‹ Previous</small><span>${esc(prev.title)}</span></a>` : '<span></span>'}
+        ${next ? `<a href="#/problem/${next.n}" class="nx"><small>Next ›</small><span>${esc(next.title)}</span></a>` : ''}
+      </nav>`;
+  }
+
+  function showStep(k, { focus = false } = {}) {
+    const tabs = [...document.querySelectorAll('.ptabs [role="tab"]')];
+    if (!tabs.some(b => b.dataset.v === k)) return;
+    for (const b of tabs) {
+      const on = b.dataset.v === k;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on);
+      b.tabIndex = on ? 0 : -1;
+      if (on) { b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); if (focus) b.focus(); }
+    }
+    document.querySelectorAll('[data-pane]').forEach(el => { el.hidden = el.dataset.pane !== k; });
+    const n = location.hash.split('/')[2];
+    history.replaceState(null, '', `#/problem/${n}/${k}`);
+    // bring the top of the new step into view, just under the sticky tabs
+    const bar = $('.ptabs'), card = $('.pt-card');
+    if (bar && card && card.getBoundingClientRect().top < bar.offsetHeight) {
+      window.scrollTo({ top: window.scrollY + card.getBoundingClientRect().top - bar.offsetHeight - 8 });
+    }
   }
 
   // ── Review session ───────────────────────────────────────────
@@ -961,15 +1007,13 @@
       <h2>Drill a pattern</h2>
       <div class="drill-list">${TOPICS.map(tp => `<a href="#/review/topic/${tp.slug}"><span>${esc(tp.name)}</span><span class="muted small">${tp.problems.length}</span></a>`).join('')}</div>
       <h2>How grading works</h2>
-      <div class="card small" style="color:var(--ink-2)">
-        Scheduling uses <b>FSRS-6</b>, the algorithm behind modern Anki: each card tracks how stable your memory is and comes back just before you would forget it (aiming for ${Math.round(S.retention * 100)}% recall — change in More).
-        <b style="color:var(--hard)">Again</b> — couldn’t recall it (shows again this session).
-        <b style="color:var(--med)">Hard</b> — got there slowly or needed a hint.
-        <b style="color:var(--easy)">Good</b> — recalled the pattern and approach.
-        <b style="color:var(--accent)">Easy</b> — instant.
-        Today’s cards are <b>interleaved</b> across topics — mixing problem types trains you to recognise which pattern applies, not just how to run it.
-        New cards come from your solved problems first, then the current week’s plan (${S.newPerDay}/day).
-      </div>`;
+      <div class="grade-key">
+        <div class="g0"><b>Again</b><span>Couldn’t recall it. It comes back later this session.</span></div>
+        <div class="g1"><b>Hard</b><span>Got there slowly, or needed a hint.</span></div>
+        <div class="g2"><b>Good</b><span>Recalled the pattern and the approach.</span></div>
+        <div class="g3"><b>Easy</b><span>Instant.</span></div>
+      </div>
+      <p class="small muted" style="margin-top:12px">Cards are scheduled with <b>FSRS-6</b> (the algorithm in modern Anki) to come back just before you’d forget them, aiming for ${Math.round(S.retention * 100)}% recall. Today’s cards mix topics, which trains you to spot which pattern applies. New cards come from your solved problems first, then this week’s plan (${S.newPerDay} a day). Change both in More.</p>`;
   }
 
   function renderReview() {
@@ -1162,7 +1206,7 @@
     const placed = movable.filter(x => x.placed).length;
     const correct = movable.filter(x => x.placed && x.placed.text === x.text.trim()).length;
     view.innerHTML = `
-      <a href="#/problem/${p.n}" class="small">‹ ${esc(p.title)}</a>
+      <a href="#/problem/${p.n}" class="back">‹ ${esc(p.title)}</a>
       <h1 style="margin-top:10px">Rebuild the code</h1>
       <p class="sub">${esc(p.title)} · tap lines in the order they belong. Braces are already in place.</p>
       <div class="row" style="margin-bottom:12px">${langTabs()}<span class="spacer"></span>
@@ -1367,7 +1411,7 @@
       save();
       renderNavFoot();
       toast('Mock saved — scheduled for review.');
-      location.hash = `#/problem/${n}`;
+      location.hash = `#/problem/${n}/solution`;
       return;
     }
     save();
@@ -1378,8 +1422,9 @@
     const toc = [['pb-study', 'How to study'], ['pb-method', 'Interview method'], ['pb-constraints', 'Constraints'], ['pb-cues', 'Which pattern?'],
       ['pb-stuck', 'When stuck'], ['pb-ds', 'Data structures'], ['pb-edge', 'Edge cases'], ['pb-recursion', 'Recursion'], ['pb-sources', 'Sources']];
     view.innerHTML = `
-      <h1>Playbook</h1>
-      <p class="sub">How to study, how to run the interview, and the reference tables you’ll look at most.</p>
+      <a href="#/patterns" class="back">‹ Learn</a>
+      <header class="page-h"><h1>Interview playbook</h1>
+        <p class="sub">How to study, how to run the interview, and the reference tables you’ll look at most.</p></header>
       <nav class="lesson-toc">${toc.map(([id, l]) => `<a href="#/playbook" data-act="jump" data-v="${id}">${l}</a>`).join('')}</nav>
       <div class="playbook">${window.PLAYBOOK_HTML || ''}</div>`;
   }
@@ -1517,7 +1562,8 @@
     const [page, a, b] = parts;
     document.querySelectorAll('[data-nav]').forEach(el => {
       const nav = el.dataset.nav;
-      el.classList.toggle('active', nav === page || (nav === 'today' && page === 'plan') || (nav === 'patterns' && (page === 'pattern' || page === 'problem')) ||
+      el.classList.toggle('active', nav === page || (nav === 'today' && page === 'plan') || (nav === 'patterns' && (page === 'pattern' || page === 'playbook')) ||
+        (nav === 'problems' && page === 'problem') ||
         (nav === 'review' && (page === 'quiz' || page === 'parsons' || page === 'mock')));
     });
     if (page !== 'review') session = null;
@@ -1531,7 +1577,7 @@
       case 'patterns': renderPatterns(); break;
       case 'pattern': renderPattern(a); break;
       case 'problems': renderProblems(); break;
-      case 'problem': renderProblem(Number(a)); break;
+      case 'problem': renderProblem(Number(a), b); break;
       case 'more': renderMore(); break;
       case 'playbook': renderPlaybook(); break;
       case 'mock': renderMock(); break;
@@ -1635,6 +1681,8 @@
       case 'jump': {
         e.preventDefault();
         const t = document.getElementById(v);
+        const pane = t?.closest('[data-pane]');
+        if (pane?.hidden) { showStep(pane.dataset.pane); break; }
         if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
         else if (el.getAttribute('href')) location.hash = el.getAttribute('href');
         break;
@@ -1681,8 +1729,8 @@
         break;
       }
       case 'syncnow': MyCode.sync().then(ok => ok && toast('Synced')); break;
-      case 'fdiff': filters.diff = v; renderProblems(); break;
-      case 'fstatus': filters.status = v; renderProblems(); break;
+      case 'fclear': Object.assign(filters, { q: '', topic: '', diff: '', status: '' }); renderProblems(); break;
+      case 'ptab': showStep(v); break;
       case 'newper': S.newPerDay = Number(v); save(); renderMore(); break;
       case 'theme': S.theme = v; save(); applyTheme(); renderMore(); break;
       case 'hide-install': S.hideInstall = true; save(); renderToday(); break;
@@ -1706,13 +1754,6 @@
     }
   });
 
-  document.addEventListener('toggle', e => {
-    const d = e.target;
-    if (!(d instanceof HTMLDetailsElement) || !d.open) return;
-    const body = d.querySelector(':scope > [data-body]');
-    if (body && !body.childElementCount) body.innerHTML = problemBody(BY_N[body.dataset.body]);
-  }, true);
-
   document.addEventListener('input', e => {
     if (e.target.dataset.editor) {
       const ta = e.target;
@@ -1723,6 +1764,7 @@
     const f = e.target.dataset.filter;
     if (!f) return;
     filters[f] = e.target.value;
+    e.target.closest('.fsel')?.classList.toggle('on', !!e.target.value);
     renderProblemList();
   });
 
@@ -1771,8 +1813,18 @@
     }
   }, true);
 
+  // study-step tabs: arrow keys move between steps
   document.addEventListener('keydown', e => {
-    if (quiz && !e.target.matches('input, textarea, select') && !e.metaKey && !e.ctrlKey) {
+    if (!e.target.matches?.('.ptabs [role="tab"]') || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const tabs = [...document.querySelectorAll('.ptabs [role="tab"]')];
+    const k = tabs.indexOf(e.target);
+    const j = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : (k + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    showStep(tabs[j].dataset.v, { focus: true });
+  });
+
+  document.addEventListener('keydown', e => {
+    if (quiz &&!e.target.matches('input, textarea, select') && !e.metaKey && !e.ctrlKey) {
       const q = quiz.qs[quiz.idx];
       if (q && q.picked == null && /^[1-4]$/.test(e.key)) { e.preventDefault(); $(`.quiz-opt:nth-child(${e.key})`)?.click(); }
       else if (q && q.picked != null && e.key === 'Enter') { e.preventDefault(); $('[data-act="qnext"]')?.click(); }
