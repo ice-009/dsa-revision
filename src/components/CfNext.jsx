@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useApp } from '../lib/store';
 import { CF_LADDERS, cfTier } from '../data/cf';
 import '../styles/cf.css';
+import '../styles/cf-add.css';
 
 /** Compact "Codeforces next up" card: first unsolved problem of the lowest unfinished ladder. */
 export default function CfNext() {
@@ -19,7 +20,8 @@ export default function CfNext() {
         <small className="cfn-k">Codeforces next up · {done}/{ladder.problems.length} on the {ladder.label} ladder</small>
         <b>{p.id} · {p.name}</b>
       </div>
-      <a className="btn small primary" href={p.url} target="_blank" rel="noopener noreferrer">Open</a>
+      <Link className="btn small primary" to={`/cf/solve/${p.id}`}>Solve</Link>
+      <a className="cfn-ext" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${p.name} on Codeforces`}>↗</a>
       <Link className="btn small ghost" to={`/cf/${ladder.id}`}>Sheet</Link>
     </div>
   );

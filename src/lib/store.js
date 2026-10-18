@@ -11,6 +11,7 @@ export const defaults = () => ({
   status: {}, srs: {}, days: {}, newPerDay: 8, theme: 'auto', hideInstall: false, lang: 'cpp', retention: 0.9,
   quiz: {}, parsons: {}, cxq: [0, 0], slips: {}, mocks: [], mock: null, solvedOn: {}, planEnd: PLAN_END,
   cf: {}, cfOn: {}, // Codeforces sheet: { "<problem id>": 'solved' | 'revisit' } and the day it was solved
+  cfProb: {}, cfCode: {}, cfCases: {}, // fetched/added Codeforces problems, your code per language, your extra test cases
 });
 // a fresh install: problems already done on the sheet start as solved
 export const seeded = () => {
@@ -82,6 +83,14 @@ export function setCfStatus(id, v) {
   else delete S.cfOn[id];
   save();
 }
+
+/** Save a fetched or hand-entered Codeforces problem (shape documented in api/cf.js). */
+export function addCfProblem(p) { S.cfProb[p.id] = p; save(); }
+export function removeCfProblem(id) { delete S.cfProb[id]; delete S.cfCode[id]; delete S.cfCases[id]; save(); }
+/** Draft code for a problem, per language. */
+export function setCfCode(id, lang, code) { (S.cfCode[id] ||= {})[lang] = code; save(); }
+/** Your own extra test cases: [{ in, out }]. */
+export function setCfCases(id, cases) { S.cfCases[id] = cases; save(); }
 
 export function set(patch) { Object.assign(S, patch); save(); }
 

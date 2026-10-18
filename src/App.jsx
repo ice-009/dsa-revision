@@ -13,6 +13,8 @@ import Parsons from './pages/Parsons';
 import Mock from './pages/Mock';
 import More from './pages/More';
 import Codeforces from './pages/Codeforces';
+import CfAdd from './pages/CfAdd';
+import CfSolve from './pages/CfSolve';
 import NotFound from './pages/NotFound';
 
 // Hash routes match the old app, so existing bookmarks and the PWA shortcuts keep working.
@@ -40,6 +42,8 @@ export default function App() {
           <Route path="mock" element={<Mock />} />
           <Route path="more" element={<More />} />
           <Route path="cf" element={<Codeforces />} />
+          <Route path="cf/add" element={<CfAdd />} />
+          <Route path="cf/solve/:id" element={<CfSolve />} />
           <Route path="cf/:ladder" element={<Codeforces />} />
           <Route path="*" element={<NotFound />} />
         </Route>

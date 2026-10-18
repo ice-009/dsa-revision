@@ -1,0 +1,30 @@
+/* Codeforces: add-problem page, plus the Solve links shared by the sheet and the home card */
+.cf-solve { flex: 0 0 auto; min-height: 44px; display: grid; place-items: center; padding: 0 12px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; text-decoration: none; }
+.cf-addbtn { margin-top: 10px; }
+.cfn-ext { flex: 0 0 auto; width: 44px; height: 44px; display: grid; place-items: center; color: var(--accent); font-size: 20px; text-decoration: none; }
+
+.ca { display: grid; gap: 16px; max-width: 760px; margin: 0 auto; }
+.ca h1, .ca h2 { margin: 0 0 6px; }
+.ca-head .sub { margin: 0 0 12px; }
+.ca-fetch { display: flex; gap: 8px; align-items: flex-end; }
+.ca-big { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.ca-fetch .btn { min-height: 52px; }
+.ca label { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.ca textarea.search { resize: vertical; font-family: inherit; }
+.ca-mono { font-family: var(--mono) !important; font-size: 14px !important; }
+.ca-grid { display: grid; gap: 10px; }
+.ca-manual, .ca-preview, .ca-bulk { display: grid; gap: 12px; }
+.ca-sample { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin: 0; display: grid; gap: 8px; min-width: 0; }
+.ca-sample legend { font-size: 13px; font-weight: 700; padding: 0 6px; }
+.ca-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ca-pre { margin: 4px 0 0; padding: 8px 10px; background: var(--code-bg); color: var(--code-ink); border-radius: 10px; font-family: var(--mono); font-size: 13px; overflow-x: auto; max-height: 160px; }
+.ca-wrap { white-space: normal; }
+.ca-ok { color: var(--easy); margin: 8px 0 0; }
+.ca-err { color: var(--hard); margin: 8px 0 0; }
+.ca-fails { padding-left: 18px; font-size: 13px; }
+.ca-toggle { justify-self: start; }
+.ca-bulk summary { cursor: pointer; font-weight: 700; min-height: 28px; }
+.ca .cf-prob .btn { flex: 0 0 auto; }
+.ca .cf-prob { padding: 10px; }
+
+@media (min-width: 600px) { .ca-grid { grid-template-columns: 1fr 1fr; } }
