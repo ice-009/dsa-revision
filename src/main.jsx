@@ -2,7 +2,8 @@ import { createRoot } from 'react-dom/client';
 import './data';
 import './lib/toast';
 import { applyTheme } from './lib/store';
-import './styles/legacy.css';
+import './styles/base.css';
+import './styles/tablet.css';
 import App from './App';
 
 applyTheme();

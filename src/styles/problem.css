@@ -1,0 +1,8 @@
+/* Problem page: touch-friendly step tabs. Uses legacy .ptabs rules as the base. */
+.ptabs { scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.ptabs button { min-height: 44px; scroll-snap-align: center; touch-action: manipulation; }
+@media (min-width: 700px) { .ptabs { justify-content: flex-start; gap: 6px; } .ptabs button { font-size: 15px; padding-right: 18px; } }
+.pp-acts .btn, .pt-pane .btn.small, .hint-btn { min-height: 44px; }
+.pt-pane .editor { min-height: 260px; font-size: 16px; } /* 16px stops iOS zooming on focus */
+.pt-pane .fu summary { min-height: 44px; display: flex; align-items: center; }
+.pt-pane .algo li { min-height: 36px; }

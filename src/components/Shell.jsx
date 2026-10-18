@@ -35,7 +35,7 @@ export default function Shell() {
         ))}
         <NavFoot />
       </nav>
-      <main id="view" tabIndex={-1}><Outlet /></main>
+      <main id="view" key={page} tabIndex={-1}><Outlet /></main>
       <Toaster />
     </div>
   );

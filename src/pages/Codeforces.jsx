@@ -1,7 +1,148 @@
-import { useApp } from '../lib/store';
+import { useMemo, useState } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useApp, setCfStatus } from '../lib/store';
+import { CF_LADDERS, CF_ALL, CF_LADDER_BY_ID, CF_TAGS, cfTier } from '../data/cf';
+import { today, addDays } from '../lib/dates';
+import '../styles/cf.css';
 
-// TODO: port from legacy/app.js (new)
+const STATUSES = [['all', 'All'], ['todo', 'To do'], ['solved', 'Solved'], ['revisit', 'Revisit']];
+
+function streakOf(cfOn) {
+  const days = new Set(Object.values(cfOn));
+  let d = today();
+  if (!days.has(d)) d = addDays(d, -1);
+  let n = 0;
+  while (days.has(d)) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+function Ring({ done, total, label, tier, active, to }) {
+  const r = 18, c = 2 * Math.PI * r, f = total ? done / total : 0;
+  return (
+    <Link to={to} className={`cf-ring t-${tier} ${active ? 'on' : ''}`} aria-current={active ? 'page' : undefined}>
+      <svg viewBox="0 0 44 44" aria-hidden="true">
+        <circle cx="22" cy="22" r={r} className="trk" />
+        <circle cx="22" cy="22" r={r} className="val" strokeDasharray={`${c * f} ${c}`} transform="rotate(-90 22 22)" />
+      </svg>
+      <b>{label}</b>
+      <small>{done}/{total}</small>
+    </Link>
+  );
+}
+
+function Row({ p, st }) {
+  return (
+    <div className={`cf-prob ${st || ''}`}>
+      <button type="button" className="cf-tick" aria-label={st === 'solved' ? 'Mark not solved' : 'Mark solved'} onClick={() => setCfStatus(p.id, 'solved')}>
+        {st === 'solved' ? '✓' : ''}
+      </button>
+      <div className="cf-main">
+        <div className="cf-top">
+          <span className={`cf-rate t-${cfTier(p.rating)}`}>{p.rating}</span>
+          <span className="cf-name">{p.name}</span>
+          <span className="cf-id">{p.id}</span>
+        </div>
+        <div className="cf-tags">{p.tags.slice(0, 4).map(t => <span key={t} className="cf-tag">{t}</span>)}</div>
+      </div>
+      <button type="button" className={`cf-flag ${st === 'revisit' ? 'on' : ''}`} aria-label="Flag for revisit" aria-pressed={st === 'revisit'} onClick={() => setCfStatus(p.id, 'revisit')}>↻</button>
+      <a className="cf-open" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${p.name} on Codeforces`}>↗</a>
+    </div>
+  );
+}
+
 export default function Codeforces() {
-  useApp();
-  return <><h1>Codeforces</h1><p className="sub">Coming soon.</p></>;
+  const S = useApp();
+  const nav = useNavigate();
+  const { ladder: lid } = useParams();
+  const ladder = CF_LADDER_BY_ID[lid] || CF_LADDERS[0];
+  const [tag, setTag] = useState('');
+  const [status, setStatus] = useState('all');
+  const [q, setQ] = useState('');
+
+  const doneIn = l => l.problems.filter(p => S.cf[p.id] === 'solved').length;
+  const total = CF_ALL.length;
+  const solved = CF_ALL.filter(p => S.cf[p.id] === 'solved').length;
+  const revisit = CF_ALL.filter(p => S.cf[p.id] === 'revisit').length;
+  const streak = streakOf(S.cfOn);
+  const next = ladder.problems.find(p => S.cf[p.id] !== 'solved');
+
+  const tags = useMemo(() => {
+    const c = {};
+    ladder.problems.forEach(p => p.tags.forEach(t => { c[t] = (c[t] || 0) + 1; }));
+    return Object.entries(c).sort((a, b) => b[1] - a[1]).map(([t]) => t);
+  }, [ladder]);
+
+  const list = ladder.problems.filter(p => {
+    const st = S.cf[p.id];
+    if (tag && !p.tags.includes(tag)) return false;
+    if (status === 'todo' ? st === 'solved' : status !== 'all' && st !== status) return false;
+    if (q && !(`${p.name} ${p.id}`.toLowerCase().includes(q.trim().toLowerCase()))) return false;
+    return true;
+  });
+
+  const random = () => {
+    const pool = ladder.problems.filter(p => S.cf[p.id] !== 'solved');
+    if (pool.length) window.open(pool[Math.floor(Math.random() * pool.length)].url, '_blank', 'noopener');
+  };
+  const pickTag = t => setTag(x => (x === t ? '' : t));
+  const tier = cfTier(+ladder.id);
+
+  return (
+    <div className="cf">
+      <header className="cf-hero card">
+        <div>
+          <h1>Codeforces</h1>
+          <p className="sub">{CF_LADDERS.length} rating ladders, {total} classic problems. Climb one rung at a time.</p>
+        </div>
+        <div className="cf-stats">
+          <div><b>{solved}</b><small>solved</small></div>
+          <div><b>{streak}</b><small>day streak</small></div>
+          <div><b>{revisit}</b><small>to revisit</small></div>
+        </div>
+        <div className="bar cf-total"><i style={{ width: `${(solved / total) * 100}%` }} /></div>
+      </header>
+
+      <div className="cf-layout">
+        <nav className="cf-ladders" aria-label="Rating ladders">
+          {CF_LADDERS.map(l => (
+            <Ring key={l.id} to={`/cf/${l.id}`} label={l.label} tier={cfTier(+l.id)} done={doneIn(l)} total={l.problems.length} active={l.id === ladder.id} />
+          ))}
+        </nav>
+
+        <section className="cf-panel">
+          <div className={`cf-ladder-head t-${tier}`}>
+            <div>
+              <h2>Rating {ladder.label}</h2>
+              <p className="muted small">{ladder.blurb} {doneIn(ladder)} of {ladder.problems.length} solved.</p>
+            </div>
+            <button type="button" className="btn small" onClick={random} disabled={!next}>Random unsolved</button>
+          </div>
+
+          {next && (
+            <div className="card cf-next">
+              <small className="cf-k">Next up</small>
+              <b>{next.id} · {next.name}</b>
+              <a className="btn small primary" href={next.url} target="_blank" rel="noopener noreferrer">Open on Codeforces</a>
+            </div>
+          )}
+
+          <input className="search" type="search" placeholder="Search by name or id" value={q} onChange={e => setQ(e.target.value)} />
+          <div className="cf-filters">
+            <div className="segmented" role="group" aria-label="Status filter">
+              {STATUSES.map(([k, l]) => <button key={k} type="button" className={status === k ? 'on' : ''} onClick={() => setStatus(k)}>{l}</button>)}
+            </div>
+          </div>
+          <div className="chips cf-tagchips">
+            <button type="button" className={`chip ${tag ? '' : 'on'}`} onClick={() => setTag('')}>All tags</button>
+            {tags.map(t => <button key={t} type="button" className={`chip ${tag === t ? 'on' : ''}`} onClick={() => pickTag(t)}>{t}</button>)}
+          </div>
+
+          <div className="cf-grid">
+            {list.map(p => <Row key={p.id} p={p} st={S.cf[p.id]} />)}
+          </div>
+          {!list.length && <p className="muted cf-empty">Nothing matches these filters.</p>}
+        </section>
+      </div>
+    </div>
+  );
 }

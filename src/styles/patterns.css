@@ -1,0 +1,5 @@
+.pcard .pc-now { color: var(--accent); font-weight: 700; }
+.lesson-toc a, .lang-tabs button { min-height: 44px; }
+.lesson-toc a { display: inline-flex; align-items: center; }
+.op-table { display: block; overflow-x: auto; }
+.viz-host { max-width: 100%; overflow-x: auto; }
