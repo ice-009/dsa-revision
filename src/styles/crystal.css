@@ -212,3 +212,47 @@ pre, .code, .editor { -webkit-backdrop-filter: none; backdrop-filter: none; back
 @media (min-width: 1400px) {
   .app.nav-min main { margin-left: max(80px, calc((100vw - 1040px) / 2 + 40px)); }
 }
+
+/* ── Readability pass: solid surfaces, no glow, higher text contrast ──
+   Overrides the glass look above. Cards are opaque so text never sits on a moving gradient. */
+:root {
+  --bg: #dcd9d0; --surface: #f6f4ee; --surface-2: #e7e4da; --line: #c9c5b8; --accent-soft: #e1e4fa;
+  --ink: #15130f; --ink-2: #3d3a33; --ink-3: #5f5b50;
+  --aur-base: #dcd9d0;
+  --glass-fill: #f6f4ee; --glass-fill-strong: #fbfaf6; --glass-edge: #cfcbbe; --glass-line: #c9c5b8;
+  --sheen: none; --glass-blur: none; --glow: none;
+  --glass-shadow: 0 1px 2px rgba(30, 28, 20, .10), 0 6px 16px -10px rgba(30, 28, 20, .22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1015; --surface: #181b23; --surface-2: #232733; --line: #343947; --accent-soft: #2a3158;
+    --ink: #f4f2ed; --ink-2: #d2cfc7; --ink-3: #a6a399;
+    --aur-base: #0e1015;
+    --glass-fill: #181b23; --glass-fill-strong: #1e222c; --glass-edge: #343947; --glass-line: #343947;
+    --sheen: none; --glass-blur: none; --glow: none;
+    --glass-shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 20px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1015; --surface: #181b23; --surface-2: #232733; --line: #343947; --accent-soft: #2a3158;
+  --ink: #f4f2ed; --ink-2: #d2cfc7; --ink-3: #a6a399;
+  --aur-base: #0e1015;
+  --glass-fill: #181b23; --glass-fill-strong: #1e222c; --glass-edge: #343947; --glass-line: #343947;
+  --sheen: none; --glass-blur: none; --glow: none;
+  --glass-shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 20px -12px rgba(0,0,0,.7);
+}
+body::after { display: none; }
+* { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.btn.primary::after { display: none; }
+.btn.primary, .chip.on { background-image: none; background: var(--accent); box-shadow: none; }
+.nav, .nav-foot, .filters, .ptabs, .toast { background: var(--surface); }
+.td-now, [class*="hero"], .td-now.td-won {
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  box-shadow: var(--glass-shadow);
+}
+.td-now.td-won { background: color-mix(in srgb, var(--easy) 12%, var(--surface)); }
+.td-now::before, .td-now::after, .pcard::after, .flash::before, .grades button::after, .td-acts .btn.primary::after { display: none; }
+.card, .plan-day, .pt-card, .stat-tile, .setting, .mine, .cf-next, details.card, .ol-card, .pcard,
+.prob, .cf-row, .cf-rung, .cf-ring, .drill-list a, .pp-nav a, .quiz-opt, .pb-m, .td-chip, .grades button { background-image: none; box-shadow: var(--glass-shadow); }
+.nav a.active { background: var(--accent-soft); box-shadow: none; }
