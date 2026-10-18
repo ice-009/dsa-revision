@@ -6,7 +6,7 @@ const FILES = new Set(['progress.json', 'code.json', 'reviews.json']);
 const ACCEPT = new Set(['application/vnd.github+json', 'application/vnd.github.raw+json']);
 const MAX_BODY = 4 * 1024 * 1024;
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   const path = String(req.query.path || '');
   if (!FILES.has(path)) return res.status(400).json({ error: 'unknown file' });
@@ -36,4 +36,4 @@ module.exports = async (req, res) => {
   if (remaining) res.setHeader('x-ratelimit-remaining', remaining);
   res.status(gh.status).setHeader('Content-Type', gh.headers.get('content-type') || 'application/json');
   return res.send(text);
-};
+}
