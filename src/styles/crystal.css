@@ -2,13 +2,13 @@
    Loaded after base/tablet. Light = airy pastel glass; dark = deep navy with glowing gems. */
 :root {
   /* aurora palette (light) */
-  --aur-1: rgba(124, 108, 255, .50);  /* violet */
-  --aur-2: rgba(70, 205, 230, .46);   /* aqua */
-  --aur-3: rgba(255, 140, 190, .42);  /* rose */
-  --aur-4: rgba(150, 120, 255, .34);
-  --aur-base: linear-gradient(160deg, #f4f1ff 0%, #eaf4fb 55%, #fbeff5 100%);
-  --glass-fill: color-mix(in srgb, #fff 58%, transparent);
-  --glass-fill-strong: color-mix(in srgb, #fff 72%, transparent);
+  --aur-1: rgba(100, 86, 220, .34);  /* violet */
+  --aur-2: rgba(50, 150, 190, .28);   /* aqua */
+  --aur-3: rgba(200, 100, 150, .22);  /* rose */
+  --aur-4: rgba(110, 90, 210, .22);
+  --aur-base: linear-gradient(160deg, #c9c7e6 0%, #bccddd 55%, #d3c3d2 100%);
+  --glass-fill: color-mix(in srgb, #fff 46%, transparent);
+  --glass-fill-strong: color-mix(in srgb, #fff 62%, transparent);
   --glass-edge: rgba(255, 255, 255, .85);
   --glass-edge-dim: color-mix(in srgb, var(--accent) 18%, transparent);
   --glass-blur: blur(16px) saturate(165%);
