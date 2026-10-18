@@ -34,20 +34,22 @@ function Ring({ done, total, label, tier, active, to }) {
 function Row({ p, st }) {
   return (
     <div className={`cf-prob ${st || ''}`}>
-      <button type="button" className="cf-tick" aria-label={st === 'solved' ? 'Mark not solved' : 'Mark solved'} onClick={() => setCfStatus(p.id, 'solved')}>
-        {st === 'solved' ? '✓' : ''}
-      </button>
       <div className="cf-main">
         <div className="cf-top">
           <span className={`cf-rate t-${cfTier(p.rating)}`}>{p.rating}</span>
-          <span className="cf-name">{p.name}</span>
+          <span className="cf-name" title={p.name}>{p.name}</span>
           <span className="cf-id">{p.id}</span>
         </div>
-        <div className="cf-tags">{(p.tags || []).slice(0, 4).map(t => <span key={t} className="cf-tag">{t}</span>)}</div>
+        <div className="cf-tags">{(p.tags || []).slice(0, 3).map(t => <span key={t} className="cf-tag">{t}</span>)}</div>
       </div>
-      <button type="button" className={`cf-flag ${st === 'revisit' ? 'on' : ''}`} aria-label="Flag for revisit" aria-pressed={st === 'revisit'} onClick={() => setCfStatus(p.id, 'revisit')}>↻</button>
-      <Link className="cf-solve" to={`/cf/solve/${p.id}`} aria-label={`Solve ${p.name} in the app`}>Solve</Link>
-      <a className="cf-open" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${p.name} on Codeforces`}>↗</a>
+      <div className="cf-acts">
+        <button type="button" className="cf-tick" aria-label={st === 'solved' ? 'Mark not solved' : 'Mark solved'} onClick={() => setCfStatus(p.id, 'solved')}>
+          {st === 'solved' ? '✓' : ''}
+        </button>
+        <button type="button" className={`cf-flag ${st === 'revisit' ? 'on' : ''}`} aria-label="Flag for revisit" aria-pressed={st === 'revisit'} onClick={() => setCfStatus(p.id, 'revisit')}>↻</button>
+        <Link className="cf-solve" to={`/cf/solve/${p.id}`} aria-label={`Solve ${p.name} in the app`}>Solve</Link>
+        <a className="cf-open" href={p.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${p.name} on Codeforces`}>↗</a>
+      </div>
     </div>
   );
 }
@@ -96,18 +98,18 @@ export default function Codeforces() {
   const tier = isMine ? 'blue' : cfTier(+ladder.id);
 
   return (
-    <div className="cf">
+    <div className="cf-wrap"><div className="cf">
       <header className="cf-hero card">
-        <div>
+        <div className="cf-ttl">
           <h1>Codeforces</h1>
-          <p className="sub">{CF_LADDERS.length} rating ladders, {total} classic problems. Climb one rung at a time.</p>
-          <Link className="btn small primary cf-addbtn" to="/cf/add">+ Add problem</Link>
+          <p className="sub">{CF_LADDERS.length} ladders, {total} classic problems.</p>
         </div>
         <div className="cf-stats">
-          <div><b>{solved}</b><small>solved</small></div>
-          <div><b>{streak}</b><small>day streak</small></div>
-          <div><b>{revisit}</b><small>to revisit</small></div>
+          <span><b>{solved}</b> solved</span>
+          <span><b>{streak}</b> day streak</span>
+          <span><b>{revisit}</b> to revisit</span>
         </div>
+        <Link className="btn small primary cf-addbtn" to="/cf/add">+ Add problem</Link>
         <div className="bar cf-total"><i style={{ width: `${(solved / total) * 100}%` }} /></div>
       </header>
 
@@ -131,7 +133,7 @@ export default function Codeforces() {
           {next && (
             <div className="card cf-next">
               <small className="cf-k">Next up</small>
-              <b>{next.id} · {next.name}</b>
+              <b title={next.name}>{next.id} · {next.name}</b>
               <Link className="btn small primary" to={`/cf/solve/${next.id}`}>Solve</Link>
               <a className="btn small ghost" href={next.url} target="_blank" rel="noopener noreferrer">Codeforces ↗</a>
             </div>
@@ -156,6 +158,6 @@ export default function Codeforces() {
             : <p className="muted cf-empty">Nothing matches these filters.</p>)}
         </section>
       </div>
-    </div>
+    </div></div>
   );
 }

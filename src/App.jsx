@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Shell from './components/Shell';
 import Today from './pages/Today';
@@ -14,14 +15,17 @@ import Mock from './pages/Mock';
 import More from './pages/More';
 import Codeforces from './pages/Codeforces';
 import CfAdd from './pages/CfAdd';
-import CfSolve from './pages/CfSolve';
 import NotFound from './pages/NotFound';
+
+// The coding workspace carries the editor and autocomplete data, so it loads only when opened.
+const CfSolve = lazy(() => import('./pages/CfSolve'));
 
 // Hash routes match the old app, so existing bookmarks and the PWA shortcuts keep working.
 export default function App() {
   return (
     <HashRouter>
       <Routes>
+        <Route path="cf/solve/:id" element={<Suspense fallback={<div className="cfs-boot" role="status">Loading workspace…</div>}><CfSolve /></Suspense>} />
         <Route element={<Shell />}>
           <Route index element={<Navigate to="/today" replace />} />
           <Route path="today" element={<Today />} />
@@ -43,7 +47,6 @@ export default function App() {
           <Route path="more" element={<More />} />
           <Route path="cf" element={<Codeforces />} />
           <Route path="cf/add" element={<CfAdd />} />
-          <Route path="cf/solve/:id" element={<CfSolve />} />
           <Route path="cf/:ladder" element={<Codeforces />} />
           <Route path="*" element={<NotFound />} />
         </Route>
