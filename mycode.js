@@ -193,7 +193,7 @@
   /* ---------- progress: three-way merge ---------- */
 
   // what syncs; theme, the install banner and an in-progress mock stay per device
-  const MAPS = ['status', 'parsons', 'solvedOn'];  // per problem: the side that changed it wins
+  const MAPS = ['status', 'parsons', 'solvedOn', 'cf', 'cfOn'];  // per problem: the side that changed it wins
   const COUNTS = ['days', 'quiz', 'cxq']; // counters: both sides' increments add up
   const LISTS = ['slips', 'mocks'];      // append-only: keep both sides' new entries
   const SCALARS = ['newPerDay', 'retention', 'lang', 'planEnd'];

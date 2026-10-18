@@ -4,49 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>DSA Revise</title>
-  <meta name="description" content="Daily DSA pattern revision: short notes, approaches and spaced-repetition flashcards for the switch-prep sheet.">
+  <meta name="description" content="Daily DSA pattern revision: short notes, approaches and spaced-repetition flashcards, plus LeetCode and Codeforces sheets.">
   <meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="DSA Revise">
-  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <link rel="icon" type="image/png" href="icons/icon-192.png">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
 </head>
 <body>
-  <div class="app">
-    <nav class="nav" aria-label="Main">
-      <div class="brand">
-        <img src="icons/icon-192.png" alt="" width="32" height="32">
-        <span>DSA Revise</span>
-      </div>
-      <a href="#/today" data-nav="today"><svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg><span>Today</span></a>
-      <a href="#/review" data-nav="review"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></svg><span>Review</span></a>
-      <a href="#/patterns" data-nav="patterns"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Learn</span></a>
-      <a href="#/problems" data-nav="problems"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Problems</span></a>
-      <a href="#/more" data-nav="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg><span>More</span></a>
-      <div class="nav-foot" id="nav-foot"></div>
-    </nav>
-    <main id="view" tabindex="-1"></main>
-  </div>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div id="root"></div>
   <noscript>This app needs JavaScript.</noscript>
-  <script src="problems.js"></script>
-  <script src="notes.js"></script>
-  <script src="topics.js"></script>
-  <script src="solutions.js"></script>
-  <script src="explain.js"></script>
-  <script src="lessons.js"></script>
-  <script src="plus/plus1.js"></script>
-  <script src="plus/plus2.js"></script>
-  <script src="plus/plus3.js"></script>
-  <script src="plus/plus4.js"></script>
-  <script src="playbook.js"></script>
-  <script src="viz.js"></script>
-  <script src="mycode.js"></script>
-  <script src="app.js"></script>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
