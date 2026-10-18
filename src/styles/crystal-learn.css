@@ -1,0 +1,117 @@
+/* Crystal: Learn pages + Problems + Problem page. Uses tokens from crystal.css. */
+
+/* ── Problems list: cheap translucent rows (no per-row blur) ── */
+.prob {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  background: var(--sheen), color-mix(in srgb, var(--surface) 62%, transparent);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 8px 18px -14px color-mix(in srgb, var(--accent) 40%, rgba(20,20,50,.4));
+  transition: border-color .18s, box-shadow .18s, transform .18s;
+}
+@media (hover: hover) { .prob:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 var(--glass-edge), var(--glow); } }
+.prob:has(.dot.solved) { background: var(--sheen), linear-gradient(90deg, color-mix(in srgb, var(--easy) 11%, transparent), transparent 55%), color-mix(in srgb, var(--surface) 62%, transparent); }
+.group-h h2 { letter-spacing: -.01em; }
+.group-h span { padding: 2px 10px; border-radius: 99px; background: var(--glass-fill); border: 1px solid var(--glass-edge); }
+
+/* Gem status dots */
+.dot { background: color-mix(in srgb, var(--surface) 55%, transparent); border: 2px solid color-mix(in srgb, var(--ink) 22%, transparent); box-shadow: inset 0 1px 2px rgba(20,20,50,.12); transition: box-shadow .25s, transform .2s, background .2s; }
+.dot.solved {
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.7), transparent 42%), linear-gradient(145deg, color-mix(in srgb, var(--easy) 78%, #fff), var(--easy));
+  border-color: color-mix(in srgb, var(--easy) 70%, #fff);
+  box-shadow: inset 0 -3px 5px -2px rgba(0,0,0,.25), 0 0 0 3px color-mix(in srgb, var(--easy) 16%, transparent), 0 0 14px color-mix(in srgb, var(--easy) 60%, transparent);
+}
+.dot.revisit { background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.4), transparent 45%), var(--hard-soft); box-shadow: 0 0 10px color-mix(in srgb, var(--hard) 35%, transparent); }
+
+/* Difficulty badges as small gems */
+.badge[class*="d-"] { border: 1px solid; border-radius: 99px; padding: 1px 10px; position: relative; overflow: hidden;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.45), rgba(255,255,255,0) 60%); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); }
+.badge.d-Easy { border-color: color-mix(in srgb, var(--easy) 40%, transparent); background-color: var(--easy-soft); }
+.badge.d-Medium { border-color: color-mix(in srgb, var(--med) 40%, transparent); background-color: var(--med-soft); }
+.badge.d-Hard { border-color: color-mix(in srgb, var(--hard) 40%, transparent); background-color: var(--hard-soft); }
+.tag { border-radius: 99px; border: 1px solid var(--glass-edge-dim); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+/* Filters: frosted floating strip + chips */
+.filters { background: color-mix(in srgb, var(--bg) 45%, transparent); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.chip { box-shadow: inset 0 1px 0 var(--glass-edge); }
+select.chip { background-color: var(--glass-fill); }
+.search { background: var(--glass-fill); }
+
+/* ── Patterns / roadmap / lessons ── */
+.pcard { position: relative; overflow: hidden; }
+.pcard::after { content: ""; position: absolute; top: -40px; right: -40px; width: 110px; height: 110px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%); }
+.ico, .entry-ico { background: var(--sheen), linear-gradient(145deg, color-mix(in srgb, var(--accent) 22%, transparent), color-mix(in srgb, var(--accent-2) 16%, transparent)); box-shadow: inset 0 1px 0 var(--glass-edge), 0 0 0 1px var(--glass-edge-dim); }
+.roadmap { overflow-x: auto; }
+.rm-node rect:first-of-type { fill: color-mix(in srgb, var(--surface) 70%, transparent); stroke: var(--glass-edge-dim); }
+.rm-node.now rect:first-of-type { fill: var(--accent); filter: drop-shadow(0 4px 12px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.rm-node.past rect:first-of-type { fill: var(--easy-soft); }
+.rm-fill { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--easy) 70%, transparent)); }
+.rm-edges path { stroke: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.lesson-toc a { background: var(--glass-fill); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-edge); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.lesson-toc a:hover { color: var(--accent); }
+.lesson-hero { border-left: 1px solid var(--glass-edge); position: relative; }
+.lesson-hero::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--gem); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent); }
+
+/* ── Playbook ── */
+.pb-m, .pb-chips span, .pb-table, .pb-note, .ol-card, .pp-nav a, .drill-list a {
+  background: var(--sheen), var(--glass-fill); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-edge), 0 10px 24px -16px color-mix(in srgb, var(--accent) 35%, rgba(20,20,50,.3));
+}
+.pb-table { overflow: hidden; border-collapse: separate; border-spacing: 0; }
+.pb-table th { background: color-mix(in srgb, var(--accent) 9%, var(--glass-fill-strong)); color: var(--ink-2); }
+.pb-table td { border-top-color: color-mix(in srgb, var(--line) 70%, transparent); }
+.pb-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--accent) 3%, transparent); }
+.pb-card .pb-do, .pb-say { box-shadow: inset 0 1px 0 var(--glass-edge); border: 1px solid var(--glass-edge-dim); }
+.pb-card .pb-do { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.pb-say { background: color-mix(in srgb, var(--easy) 12%, transparent); }
+.pb-note { background: color-mix(in srgb, var(--med) 12%, var(--glass-fill)); }
+.pb-t { font-variant-numeric: tabular-nums; }
+
+/* ── Problem page ── */
+.pp-kicker { color: var(--accent); }
+.ptabs {
+  top: calc(env(safe-area-inset-top) + 8px); margin: 0 0 14px; padding: 5px; gap: 3px; border: 1px solid var(--glass-edge); border-radius: 999px;
+  background: var(--sheen), var(--glass-fill-strong); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 14px 30px -14px color-mix(in srgb, var(--accent) 40%, rgba(20,20,50,.4));
+}
+@media (min-width: 1000px) { .ptabs { margin: 0 0 16px; padding: 5px 6px; } }
+.ptabs button { transition: background .2s, color .2s, box-shadow .2s; }
+.ptabs button.on {
+  background: var(--sheen), color-mix(in srgb, var(--accent) 14%, var(--glass-fill-strong)); border-color: color-mix(in srgb, var(--accent) 40%, var(--glass-edge)); color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 0 18px -2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.ptab-n { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.ptabs button.on .ptab-n { background: var(--gem); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 70%, transparent), inset 0 1px 0 rgba(255,255,255,.5); }
+.pt-card { border-radius: 24px; }
+.sol, .deeper { border-top-color: var(--glass-edge-dim); }
+
+/* Code stays solid; header + language tabs are glass */
+.code-wrap { gap: 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--glass-edge-dim); box-shadow: var(--shadow); }
+.code-wrap > pre.code { border-radius: 0 0 var(--radius) var(--radius); border: 0; box-shadow: none; }
+.code-bar { padding: 7px 10px; background: var(--sheen), var(--glass-fill-strong); border-bottom: 1px solid var(--glass-edge-dim); align-items: center; }
+.lang-tabs { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.lang-tabs button.on { background: var(--sheen), var(--gem); color: var(--accent-ink); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 0 12px color-mix(in srgb, var(--accent) 50%, transparent); }
+
+/* Hints and notes as glass callouts */
+.hints li { background: color-mix(in srgb, var(--med) 12%, var(--glass-fill)); border: 1px solid color-mix(in srgb, var(--med) 25%, var(--glass-edge)); box-shadow: inset 0 1px 0 var(--glass-edge); border-radius: 12px; }
+.notes .key, .pathbox, .pt-tip, .explain {
+  background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid var(--glass-edge-dim); box-shadow: inset 0 1px 0 var(--glass-edge); border-radius: 14px;
+}
+.notes .key { padding: 12px 16px; }
+.notes .why { border-left: 0; position: relative; padding-left: 16px; }
+.notes .why::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 3px; border-radius: 3px; background: var(--gem); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 55%, transparent); }
+.notes .sheet { border-left-color: var(--glass-edge-dim); }
+details.fu { background: var(--glass-fill); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-edge); border-radius: 14px; }
+.mine, .mine-review { border-radius: 18px; }
+.pt-pane .editor { background: color-mix(in srgb, var(--surface) 70%, transparent); border-radius: 14px; }
+
+@media (max-width: 520px) {
+  .ptabs { border-radius: 22px; }
+  .prob-tick { width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prob, .dot, .ptabs button { transition: none; }
+  .prob:hover { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ptabs, .filters, .lesson-toc a { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--surface); }
+}
+.lesson-hero { margin-bottom: 14px; }

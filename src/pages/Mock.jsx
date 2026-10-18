@@ -72,7 +72,7 @@ function Running({ m }) {
   return (
     <div className="mock">
       <div className="mock-bar card">
-        <div><div className="eyebrow">Mock interview</div><div className={`mock-timer${elapsed > MOCK_MIN * 60000 ? ' over' : ''}`}>{mmss(elapsed)}</div><div className="small muted">of {MOCK_MIN}:00</div></div>
+        <div><div className="eyebrow">Mock interview</div><div className={`mock-timer${elapsed > MOCK_MIN * 60000 ? ' over' : ''}`} style={{ '--p': Math.min(1, elapsed / (MOCK_MIN * 60000)) }}>{mmss(elapsed)}</div><div className="small muted">of {MOCK_MIN}:00</div></div>
         <div className="mock-phases">{PHASES.map((x, i) => <span key={x.name} className={`mph ${i < ph ? 'done' : i === ph ? 'now' : ''}`}>{x.name}<small>{i ? PHASES[i - 1].until : 0}–{x.until}′</small></span>)}</div>
         <button type="button" className="btn primary" onClick={end}>I’m done</button>
       </div>

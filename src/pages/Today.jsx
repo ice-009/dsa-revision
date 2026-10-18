@@ -130,6 +130,7 @@ export default function Today() {
   const mockOn = S.mock && !S.mock.ended;
   const allDone = !plan.today.todo.length;
   const sk = streak();
+  const tDone = plan.today.done.length, tTotal = tDone + plan.today.todo.length;
   const weak = weakFamilies(S), slip = topSlip(S);
 
   return (
@@ -141,6 +142,14 @@ export default function Today() {
       </div>
       {plan.left > 0 && <Link className="td-pace" to="/plan">{paceText(plan)} a day · {plan.left} left · finish by {fmtDay(plan.end, { day: 'numeric', month: 'short' })} <span aria-hidden="true">→</span></Link>}
 
+      <div className="td-stats">
+        <div className="stat-tile td-st-ring">
+          <span className="ring-wrap"><span className="ring" style={{ '--v': tTotal ? Math.round(tDone / tTotal * 100) : 100, '--size': '56px', '--w': '6px' }} /><b>{tTotal ? `${tDone}/${tTotal}` : '✓'}</b></span>
+          <span>done today</span>
+        </div>
+        <div className="stat-tile"><b>{sk}</b><span>day streak</span></div>
+        <div className="stat-tile"><b>{solvedCount()}</b><span>of {PROBLEMS.length} solved</span></div>
+      </div>
       <Hero plan={plan} q={q} />
       <TodayList plan={plan} />
       {CfNext && <CfNext />}

@@ -1,0 +1,161 @@
+/* Crystal: Review, Quiz, Parsons, Mock, Codeforces */
+
+/* ── Review: luminous flip card ─────────────────────── */
+.review { perspective: 1400px; }
+.flash {
+  position: relative; overflow: hidden; border-radius: 26px;
+  background: var(--sheen), linear-gradient(160deg, color-mix(in srgb, var(--accent) 9%, var(--glass-fill-strong)), color-mix(in srgb, var(--accent-2) 7%, var(--glass-fill)));
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 2px 4px rgba(20,20,50,.05), 0 24px 60px -24px color-mix(in srgb, var(--accent) 50%, rgba(20,20,50,.4)), 0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent);
+  transition: box-shadow .3s, transform .3s;
+}
+.flash::before { /* travelling facet light */
+  content: ""; position: absolute; inset: -40% -20%; pointer-events: none;
+  background: linear-gradient(115deg, transparent 42%, rgba(255,255,255,.28) 50%, transparent 58%);
+  transform: translateX(-60%); opacity: .7;
+}
+.flash:not(.flipped):hover::before { transform: translateX(60%); transition: transform 1.1s ease; }
+.flash > * { position: relative; }
+.flash:not(.flipped):active { transform: scale(.992); }
+.flash.flipped { animation: gem-flip .55s cubic-bezier(.2, .8, .2, 1) both; transform-origin: 50% 40%; }
+.flash.flipped::before { animation: gem-glint 1.1s ease-out .1s both; }
+@keyframes gem-flip { from { transform: rotateY(-88deg) scale(.96); opacity: .2; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
+@keyframes gem-glint { from { transform: translateX(-60%); opacity: .9; } to { transform: translateX(70%); opacity: 0; } }
+.flash .prompt { border-top: 1px dashed var(--glass-edge-dim); }
+.flash .q-title { background: linear-gradient(120deg, var(--ink) 40%, color-mix(in srgb, var(--accent) 65%, var(--ink))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.kbd { background: color-mix(in srgb, var(--surface) 60%, transparent); border-color: var(--glass-edge); box-shadow: inset 0 -1px 0 var(--glass-edge-dim); }
+
+/* Grade gems */
+.grades button {
+  --gc: var(--accent); position: relative; overflow: hidden; color: var(--ink); border-radius: 16px; min-height: 66px;
+  border: 1px solid color-mix(in srgb, #fff 40%, var(--gc));
+  background: var(--sheen), linear-gradient(160deg, color-mix(in srgb, var(--gc) 78%, #fff 6%), color-mix(in srgb, var(--gc) 100%, #000 18%));
+  color: #fff; text-shadow: 0 1px 1px rgba(0,0,0,.28); font-size: 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -10px 16px -10px rgba(0,0,0,.3), 0 10px 24px -10px color-mix(in srgb, var(--gc) 75%, transparent);
+  transition: transform .15s, filter .2s, box-shadow .2s;
+}
+.grades button::after { content: ""; position: absolute; left: 8%; right: 8%; top: 0; height: 42%; border-radius: 0 0 50% 50% / 0 0 100% 100%; background: linear-gradient(rgba(255,255,255,.28), transparent); pointer-events: none; }
+.grades .g0 { --gc: var(--hard); } .grades .g1 { --gc: var(--med); } .grades .g2 { --gc: var(--easy); } .grades .g3 { --gc: var(--accent); }
+.grades .g1 { color: #3a2500; text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+.grades button small { color: inherit; opacity: .85; font-weight: 600; }
+.grades button .kbd { color: inherit; background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.4); }
+.grades button:active { transform: scale(.96); filter: brightness(.95); }
+@media (hover: hover) { .grades button:hover { border-color: color-mix(in srgb, #fff 55%, var(--gc)); filter: brightness(1.08) saturate(1.1); transform: translateY(-2px); } }
+.grades .suggest { outline: 2px solid color-mix(in srgb, var(--med) 70%, #fff); outline-offset: 3px; }
+
+.grade-key > div { background: var(--sheen), var(--glass-fill); border-color: var(--glass-edge); border-radius: 14px; box-shadow: inset 0 1px 0 var(--glass-edge); }
+.done-card .big { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 60%, transparent)); }
+.practice, .practice-row .card { transition: transform .2s, box-shadow .2s, border-color .2s; }
+.practice-row .card:hover { transform: translateY(-2px); }
+
+/* ── Quiz: glass tiles ──────────────────────────────── */
+.quiz-opt {
+  position: relative; border-radius: 16px; border: 1px solid var(--glass-edge); color: var(--ink);
+  background: var(--sheen), var(--glass-fill-strong);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 8px 20px -14px color-mix(in srgb, var(--accent) 45%, rgba(20,20,50,.4));
+  transition: transform .15s, box-shadow .25s, border-color .25s, background .25s;
+}
+.quiz-opt:not([disabled]):active { transform: scale(.98); }
+@media (hover: hover) { .quiz-opt:not([disabled]):hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--glass-edge)); box-shadow: inset 0 1px 0 var(--glass-edge), var(--glow); transform: translateY(-1px); } }
+.quiz-opt.right {
+  background: var(--sheen), color-mix(in srgb, var(--easy) 20%, var(--glass-fill-strong)); border-color: var(--easy); color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 0 0 1px var(--easy), 0 0 26px -2px color-mix(in srgb, var(--easy) 60%, transparent);
+  animation: gem-pulse .6s ease-out;
+}
+.quiz-opt.wrong {
+  background: var(--sheen), color-mix(in srgb, var(--hard) 18%, var(--glass-fill-strong)); border-color: var(--hard); color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 0 0 1px var(--hard), 0 0 24px -2px color-mix(in srgb, var(--hard) 55%, transparent);
+  animation: gem-shake .35s;
+}
+.quiz-opt.dim { opacity: .5; box-shadow: none; }
+@keyframes gem-pulse { 0% { transform: scale(.97); } 50% { transform: scale(1.02); } 100% { transform: none; } }
+@keyframes gem-shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.quiz-fb { background: var(--sheen), var(--glass-fill); border: 1px solid var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-edge); border-radius: 16px; }
+.quiz-fb.ok { background: var(--sheen), color-mix(in srgb, var(--easy) 14%, var(--glass-fill)); border-color: color-mix(in srgb, var(--easy) 45%, var(--glass-edge)); }
+.quiz-fb.no { background: var(--sheen), color-mix(in srgb, var(--hard) 12%, var(--glass-fill)); border-color: color-mix(in srgb, var(--hard) 45%, var(--glass-edge)); }
+
+/* ── Parsons: glass pills + glowing slots ───────────── */
+.pz-board { background: color-mix(in srgb, var(--code-bg) 88%, transparent); border: 1px solid color-mix(in srgb, #fff 10%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), var(--shadow); border-radius: 18px; }
+.pz-board.solved { outline: 0; border-color: var(--easy); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 30px -4px color-mix(in srgb, var(--easy) 60%, transparent); }
+.pz-line.empty { border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--accent) 6%, transparent); box-shadow: inset 0 0 14px -6px color-mix(in srgb, var(--accent) 60%, transparent); transition: box-shadow .2s, background .2s, border-color .2s; }
+.pz-line.empty.target, .pz-line.hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: 0 0 0 1px var(--accent), 0 0 22px -2px color-mix(in srgb, var(--accent) 70%, transparent), inset 0 0 14px -4px color-mix(in srgb, var(--accent) 60%, transparent); outline: 0; }
+.pz-line.placed { border-radius: 12px; background: linear-gradient(rgba(255,255,255,.12), rgba(255,255,255,.05)); box-shadow: inset 0 1px 0 rgba(255,255,255,.16); }
+.pz-line.placed.ok { background: color-mix(in srgb, var(--easy) 26%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 0 16px -4px var(--easy); }
+.pz-line.placed.bad { background: color-mix(in srgb, var(--hard) 28%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 0 16px -4px var(--hard); }
+.pz-piece {
+  border-radius: 14px; border: 1px solid var(--glass-edge); background: var(--sheen), var(--glass-fill-strong); color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 8px 18px -12px color-mix(in srgb, var(--accent) 50%, rgba(20,20,50,.4)); transition: transform .15s, box-shadow .2s, border-color .2s;
+}
+@media (hover: hover) { .pz-piece:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--glass-edge)); box-shadow: inset 0 1px 0 var(--glass-edge), var(--glow); } }
+.pz-piece:active { background: var(--sheen), color-mix(in srgb, var(--accent) 16%, var(--glass-fill-strong)); }
+.pz-grip { border-radius: 12px; background: var(--glass-fill-strong); border-color: var(--glass-edge); }
+.pz-board .pz-grip { background: rgba(255,255,255,.08); }
+.pz-ghost { background: var(--sheen), var(--glass-fill-strong); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); border-radius: 14px; box-shadow: var(--glow), 0 16px 36px -10px rgba(0,0,0,.4); }
+.pz-win { background: var(--sheen), color-mix(in srgb, var(--easy) 16%, var(--glass-fill)); border: 1px solid color-mix(in srgb, var(--easy) 45%, var(--glass-edge)); }
+
+/* ── Mock: glowing ring timer, glass phases ─────────── */
+.mock-timer {
+  --p: 0; position: relative; display: inline-block; padding: 12px 22px; margin: 6px 0 4px; border-radius: 99px; isolation: isolate;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  box-shadow: 0 0 24px -4px color-mix(in srgb, var(--accent) 55%, transparent), inset 0 0 18px -8px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.mock-timer::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 3px; z-index: -1;
+  background: conic-gradient(from -90deg, var(--accent), var(--accent-2) calc(var(--p) * 100%), color-mix(in srgb, var(--ink) 12%, transparent) 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+.mock-timer.over { box-shadow: 0 0 26px -2px color-mix(in srgb, var(--hard) 65%, transparent); }
+.mock-timer.over::before { background: var(--hard); filter: drop-shadow(0 0 6px var(--hard)); }
+.mock-bar { border-radius: 22px; }
+.mph { background: var(--glass-fill); border: 1px solid var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-edge); border-radius: 14px; transition: all .25s; }
+.mph.done { background: color-mix(in srgb, var(--easy) 16%, var(--glass-fill)); border-color: color-mix(in srgb, var(--easy) 40%, var(--glass-edge)); }
+.mph.now { background: var(--sheen), var(--gem); color: var(--accent-ink); border-color: color-mix(in srgb, #fff 35%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), var(--glow); }
+.mock-phase { border-left: 0; background: var(--sheen), linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, var(--glass-fill)), var(--glass-fill)); }
+
+/* ── Codeforces ─────────────────────────────────────── */
+.cf-stats div {
+  background: var(--sheen), color-mix(in srgb, var(--accent) 8%, var(--glass-fill-strong)); border: 1px solid var(--glass-edge); border-radius: 16px;
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 8px 20px -14px color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.cf-stats b { background: var(--gem); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.cf-ring {
+  background: var(--sheen), var(--glass-fill-strong); border: 1px solid var(--glass-edge); border-radius: 18px;
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 8px 18px -14px color-mix(in srgb, var(--tc) 60%, rgba(20,20,50,.4));
+  transition: transform .15s, box-shadow .2s, border-color .2s;
+}
+.cf-ring .trk { stroke: color-mix(in srgb, var(--tc) 16%, transparent); }
+.cf-ring svg { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--tc) 70%, transparent)); }
+.cf-ring.on { border-color: color-mix(in srgb, var(--tc) 70%, var(--glass-edge)); background: var(--sheen), color-mix(in srgb, var(--tc) 14%, var(--glass-fill-strong)); box-shadow: inset 0 1px 0 var(--glass-edge), 0 0 0 1px color-mix(in srgb, var(--tc) 45%, transparent), 0 0 24px -4px color-mix(in srgb, var(--tc) 65%, transparent); }
+@media (hover: hover) { .cf-ring:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--tc) 55%, var(--glass-edge)); } }
+.cf-ladder-head { border-left: 0; padding-left: 0; }
+.cf-ladder-head h2 { text-shadow: 0 0 22px color-mix(in srgb, var(--tc) 45%, transparent); }
+.cf-rate { box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 0 12px -3px var(--tc); background: color-mix(in srgb, var(--tc) 16%, transparent); border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent); }
+.cf-next, .cfn {
+  background: var(--sheen), linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--glass-fill)), color-mix(in srgb, var(--accent-2) 14%, var(--glass-fill)));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--glass-edge)); border-radius: 20px; box-shadow: inset 0 1px 0 var(--glass-edge), var(--glow);
+}
+/* Rows: glass look without backdrop-filter (cheap) */
+.cf-prob {
+  background: var(--sheen), var(--glass-fill-strong); border: 1px solid var(--glass-edge); border-radius: 16px;
+  box-shadow: inset 0 1px 0 var(--glass-edge), 0 6px 16px -12px color-mix(in srgb, var(--accent) 45%, rgba(20,20,50,.4));
+}
+.cf-prob.solved { background: var(--sheen), color-mix(in srgb, var(--easy) 13%, var(--glass-fill-strong)); border-color: color-mix(in srgb, var(--easy) 35%, var(--glass-edge)); }
+.cf-prob.revisit { border-color: color-mix(in srgb, var(--hard) 60%, var(--glass-edge)); box-shadow: inset 0 1px 0 var(--glass-edge), 0 0 16px -6px var(--hard); }
+.cf-tick::before { background: var(--glass-fill-strong); border-color: var(--glass-edge-dim); }
+.cf-prob.solved .cf-tick::before { background: var(--easy); box-shadow: 0 0 12px -1px var(--easy); }
+.cf-tag { background: color-mix(in srgb, var(--accent) 9%, transparent); border: 1px solid var(--glass-edge-dim); }
+
+/* ── Accessibility ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .flash, .flash.flipped, .flash::before, .quiz-opt, .quiz-opt.right, .quiz-opt.wrong, .grades button, .cf-ring, .mph { animation: none !important; transition: none !important; }
+  .flash:not(.flipped):hover::before { transform: translateX(-60%); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .pz-ghost { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--surface); }
+}
+
+/* Keep the sheet inside the viewport on narrow layouts */
+.cf-layout { grid-template-columns: minmax(0, 1fr); }
+.cf-layout > * { min-width: 0; }
+@media (min-width: 1000px) { .cf-layout { grid-template-columns: 200px minmax(0, 1fr); } }
