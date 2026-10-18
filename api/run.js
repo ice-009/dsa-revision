@@ -14,13 +14,16 @@ const errResult = (msg) => ({ status: 'err', out: '', err: msg, compile: '', tim
 async function runOne(base, key, lang, source, stdin, timeLimitMs, memoryLimitKb) {
   const headers = { 'Content-Type': 'application/json' };
   if (key) headers['X-Auth-Token'] = key;
-  const memKb = lang === 'java' ? Math.max(memoryLimitKb, 131072) : memoryLimitKb;
+  // Codeforces limits assume native speed; interpreters and the JVM need startup time and memory on top.
+  const startupMs = lang === 'cpp' ? 0 : 1500;
+  const memKb = lang === 'cpp' ? memoryLimitKb : Math.max(memoryLimitKb, 131072);
+  const cpuMs = timeLimitMs + startupMs;
   const body = {
     language_id: LANGS[lang],
     source_code: b64(source),
     stdin: b64(stdin),
-    cpu_time_limit: timeLimitMs / 1000,
-    wall_time_limit: Math.min(timeLimitMs / 1000 * 3 + 2, 20),
+    cpu_time_limit: cpuMs / 1000,
+    wall_time_limit: Math.min(cpuMs / 1000 * 3 + 2, 20),
     memory_limit: memKb,
   };
   const ctl = new AbortController();
