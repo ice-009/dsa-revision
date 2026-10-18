@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import NavFoot from './NavFoot';
 import Toaster from './Toaster';
 import { applyTheme, useApp } from '../lib/store';
@@ -26,14 +26,20 @@ export default function Shell() {
   useEffect(() => { applyTheme(); }, [S.theme]);
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
   const active = TAB[page];
+  const [min, setMin] = useState(() => { try { return localStorage.getItem('nav-min') === '1'; } catch (e) { return false; } });
+  const toggle = () => setMin(v => { try { localStorage.setItem('nav-min', v ? '0' : '1'); } catch (e) { /* ignore */ } return !v; });
   return (
-    <div className="app">
+    <div className={`app${min ? ' nav-min' : ''}`}>
       <nav className="nav" aria-label="Main">
         <div className="brand"><img src="/icons/icon-192.png" alt="" width="32" height="32" /><span>DSA Revise</span></div>
         {TABS.map(([k, to, label, icon]) => (
-          <NavLink key={k} to={to} className={active === k ? 'active' : ''}>{icon}<span>{label}</span></NavLink>
+          <NavLink key={k} to={to} title={label} className={active === k ? 'active' : ''}>{icon}<span>{label}</span></NavLink>
         ))}
         <NavFoot />
+        <button type="button" className="nav-toggle" onClick={toggle} aria-pressed={min} aria-label={min ? 'Expand sidebar' : 'Collapse sidebar'} title={min ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" />{min ? <path d="M13 10l2 2-2 2" /> : <path d="M16 10l-2 2 2 2" />}</svg>
+          <span>Collapse</span>
+        </button>
       </nav>
       <main id="view" key={page} tabIndex={-1}><Outlet /></main>
       <Toaster />

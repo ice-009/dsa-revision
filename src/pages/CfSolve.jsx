@@ -297,13 +297,19 @@ function EditorPane({ lang, pickLang, code, edit, reset, url }) {
   const [plain, setPlain] = useState(() => { try { return localStorage.getItem('cfs-plain') === '1'; } catch (e) { return false; } });
   const togglePlain = () => setPlain(v => { try { localStorage.setItem('cfs-plain', v ? '0' : '1'); } catch (e) { /* ignore */ } return !v; });
   const usePlain = small || plain;
+  const [fs, setFs] = useState(() => { try { return Math.min(30, Math.max(12, +localStorage.getItem('cfs-fs') || 18)); } catch (e) { return 18; } });
+  const bump = d => setFs(v => { const n = Math.min(30, Math.max(12, v + d)); try { localStorage.setItem('cfs-fs', String(n)); } catch (e) { /* ignore */ } return n; });
   return (
-    <div className="cfs-editor card">
+    <div className="cfs-editor card" style={{ '--cfs-fs': `${fs}px` }}>
       <div className="cfs-bar">
         <div className="segmented" role="group" aria-label="Language">
           {CF_LANGS.map(([v, l]) => <button key={v} type="button" className={lang === v ? 'on' : ''} aria-pressed={lang === v} onClick={() => pickLang(v)}>{l}</button>)}
         </div>
         <span className="spacer" />
+        <div className="cfs-fs" role="group" aria-label="Code size">
+          <button type="button" className="btn small ghost" aria-label="Smaller code" disabled={fs <= 12} onClick={() => bump(-1)}>A−</button>
+          <button type="button" className="btn small ghost" aria-label="Larger code" disabled={fs >= 30} onClick={() => bump(1)}>A+</button>
+        </div>
         <button type="button" className="btn small ghost" onClick={reset}>Reset to template</button>
         <button type="button" className="btn small" onClick={() => copyText(code, 'Code copied')}>Copy code</button>
       </div>
@@ -315,7 +321,7 @@ function EditorPane({ lang, pickLang, code, edit, reset, url }) {
           <Suspense fallback={<div className="cfs-loading muted" role="status">Loading editor…</div>}>
             <Monaco height="100%" language={MONACO_LANG[lang]} path={`cf-${lang}`} theme={dark ? 'vs-dark' : 'light'} value={code}
               onChange={v => edit(v ?? '')}
-              options={{ minimap: { enabled: false }, fontSize: 14, tabSize: 4, scrollBeyondLastLine: false, automaticLayout: true, fontFamily: 'JetBrains Mono, ui-monospace, Menlo, monospace', padding: { top: 10 } }} />
+              options={{ minimap: { enabled: false }, fontSize: fs, lineHeight: Math.round(fs * 1.55), tabSize: 4, scrollBeyondLastLine: false, automaticLayout: true, fontFamily: 'JetBrains Mono, ui-monospace, Menlo, monospace', padding: { top: 10 } }} />
           </Suspense>
         </div>
       )}

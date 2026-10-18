@@ -190,3 +190,25 @@ pre, .code, .editor { -webkit-backdrop-filter: none; backdrop-filter: none; back
 @media (prefers-reduced-transparency: reduce) {
   .card, .plan-day, .pt-card, .nav, .toast, [class*="hero"], .filters, .ptabs { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* ── Collapsible sidebar (desktop): full 244px, or an 80px icon rail ── */
+.nav-toggle { display: none; }
+@media (min-width: 1000px) {
+  .nav-toggle { display: flex; align-items: center; gap: 14px; min-height: 44px; margin-top: 8px; padding: 8px 14px; border: 0; border-radius: 14px; background: transparent; color: var(--ink-3); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .nav-toggle:hover { background: var(--surface-2); color: var(--ink); }
+  .nav-toggle svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .nav, main, .toast { transition: width .22s var(--ease), margin-left .22s var(--ease), left .22s var(--ease); }
+  .app.nav-min .nav { width: 80px; padding-left: 8px; padding-right: 8px; }
+  .app.nav-min .nav a { flex-direction: column; justify-content: center; gap: 4px; padding: 6px 0; min-height: 60px; font-size: 10.5px; }
+  .app.nav-min .brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .app.nav-min .brand span, .app.nav-min .nav-foot, .app.nav-min .nav-toggle span { display: none; }
+  .app.nav-min .nav-toggle { justify-content: center; padding: 8px 0; margin-top: auto; }
+  .app.nav-min main { margin-left: 80px; }
+  .app.nav-min .toast { left: calc(50% + 40px); }
+  .nav-toggle { margin-top: 8px; }
+  .nav-foot { margin-top: auto; }
+  .nav-foot + .nav-toggle { margin-top: 8px; }
+}
+@media (min-width: 1400px) {
+  .app.nav-min main { margin-left: max(80px, calc((100vw - 1040px) / 2 + 40px)); }
+}
